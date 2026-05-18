@@ -2,6 +2,31 @@ const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 const env = require('../config/env');
 
+const normalizedPublicServerUrl = env.PUBLIC_SERVER_URL
+  ? env.PUBLIC_SERVER_URL.replace(/\/$/, '')
+  : null;
+
+const servers = [
+  {
+    url: env.API_PREFIX,
+    description: 'Current server (dynamic)',
+  },
+];
+
+if (normalizedPublicServerUrl) {
+  servers.unshift({
+    url: `${normalizedPublicServerUrl}${env.API_PREFIX}`,
+    description: 'Configured public server',
+  });
+}
+
+if (env.NODE_ENV !== 'production') {
+  servers.push({
+    url: `http://localhost:${env.PORT}${env.API_PREFIX}`,
+    description: 'Local development server',
+  });
+}
+
 const options = {
   definition: {
     openapi: '3.0.3',
@@ -11,12 +36,7 @@ const options = {
       description:
         'Production-grade reusable ecommerce backend starter. Architecture: Route -> Controller -> Service -> Repository -> Sequelize Model. RBAC roles: developer, super_admin, admin, customer.',
     },
-    servers: [
-      {
-        url: `http://localhost:${env.PORT}${env.API_PREFIX}`,
-        description: 'Local development server',
-      },
-    ],
+    servers,
     tags: [
       {
         name: 'Auth',
