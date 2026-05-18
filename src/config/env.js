@@ -32,4 +32,10 @@ if (error) {
   throw new Error(`Environment validation failed: ${error.message}`);
 }
 
+const normalizedApiPrefix = value.API_PREFIX
+  ? `/${String(value.API_PREFIX).replace(/^\/+/, '').replace(/\/+$/, '')}`
+  : '/api/v1';
+
+value.API_PREFIX = normalizedApiPrefix === '/' ? '/api/v1' : normalizedApiPrefix;
+
 module.exports = value;

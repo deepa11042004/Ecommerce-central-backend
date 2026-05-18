@@ -4,6 +4,17 @@ const { routes: productRoutes } = require('../modules/product');
 
 const router = express.Router();
 
+router.get('/', (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'API base route',
+    data: {
+      health: `${req.baseUrl}/health`,
+      docs: '/api-docs',
+    },
+  });
+});
+
 router.get('/health', (req, res) => {
   return res.status(200).json({
     success: true,
