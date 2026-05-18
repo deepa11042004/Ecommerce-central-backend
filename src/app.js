@@ -35,8 +35,34 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 if (env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+  app.use(
+    morgan('dev', {
+      skip: (req, res) => {
+        const isSwaggerAsset = req.path.startsWith('/api-docs/') &&
+          (req.path.endsWith('.js') || req.path.endsWith('.css'));
+        const isCachedAsset = res.statusCode === 304;
+
+        return isSwaggerAsset || isCachedAsset;
+      },
+    })
+  );
 }
+
+app.get('/', (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'Ecommerce backend is running',
+    data: {
+      docs: '/api-docs',
+      health: '/health',
+      apiBase: env.API_PREFIX,
+    },
+  });
+});
+
+app.get('/favicon.ico', (req, res) => {
+  return res.status(204).end();
+});
 
 app.get('/health', (req, res) => {
   return res.status(200).json({
