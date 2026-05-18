@@ -7,6 +7,16 @@ const defineUserModel = (sequelize, DataTypes) => {
         autoIncrement: true,
         primaryKey: true,
       },
+      firstName: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+        field: 'first_name',
+      },
+      lastName: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+        field: 'last_name',
+      },
       fullName: {
         type: DataTypes.STRING(120),
         allowNull: false,

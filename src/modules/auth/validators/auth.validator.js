@@ -9,6 +9,17 @@ const loginSchema = Joi.object({
   query: Joi.object({}).optional(),
 });
 
+const registerSchema = Joi.object({
+  body: Joi.object({
+    firstName: Joi.string().min(1).max(80).required(),
+    lastName: Joi.string().min(1).max(80).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).max(64).required(),
+  }).required(),
+  params: Joi.object({}).optional(),
+  query: Joi.object({}).optional(),
+});
+
 const refreshTokenSchema = Joi.object({
   body: Joi.object({
     refreshToken: Joi.string().required(),
@@ -19,5 +30,6 @@ const refreshTokenSchema = Joi.object({
 
 module.exports = {
   loginSchema,
+  registerSchema,
   refreshTokenSchema,
 };

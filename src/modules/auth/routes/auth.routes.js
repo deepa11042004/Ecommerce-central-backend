@@ -1,9 +1,43 @@
 const express = require('express');
 const controller = require('../controllers/auth.controller');
 const validate = require('../../../middleware/validate.middleware');
-const { loginSchema, refreshTokenSchema } = require('../validators/auth.validator');
+const { loginSchema, registerSchema, refreshTokenSchema } = require('../validators/auth.validator');
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Register a customer account
+ *     description: Creates a customer account with first name, last name, email, and password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *           example:
+ *             firstName: John
+ *             lastName: Doe
+ *             email: john@example.com
+ *             password: Password@123
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginSuccessResponse'
+ *       400:
+ *         description: Validation or duplicate email error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post('/register', validate(registerSchema), controller.register);
 
 /**
  * @swagger

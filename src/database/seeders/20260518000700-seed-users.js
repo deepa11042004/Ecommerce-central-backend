@@ -25,6 +25,8 @@ module.exports = {
 
     const users = [
       {
+        first_name: 'Developer',
+        last_name: 'User',
         full_name: 'Developer User',
         email: 'developer@starter.local',
         password_hash: passwordHash,
@@ -33,6 +35,8 @@ module.exports = {
         updated_at: now,
       },
       {
+        first_name: 'Super',
+        last_name: 'Admin',
         full_name: 'Super Admin User',
         email: 'superadmin@starter.local',
         password_hash: passwordHash,
@@ -41,6 +45,8 @@ module.exports = {
         updated_at: now,
       },
       {
+        first_name: 'Admin',
+        last_name: 'User',
         full_name: 'Admin User',
         email: 'admin@starter.local',
         password_hash: passwordHash,
@@ -49,6 +55,8 @@ module.exports = {
         updated_at: now,
       },
       {
+        first_name: 'Customer',
+        last_name: 'User',
         full_name: 'Customer User',
         email: 'customer@starter.local',
         password_hash: passwordHash,

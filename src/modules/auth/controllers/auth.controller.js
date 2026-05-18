@@ -12,6 +12,16 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
+const register = asyncHandler(async (req, res) => {
+  const data = await AuthService.register(req.body);
+
+  return sendSuccess(res, {
+    statusCode: 201,
+    message: 'Registration successful',
+    data,
+  });
+});
+
 const loginAdminPanel = asyncHandler(async (req, res) => {
   const data = await AuthService.loginAdminPanel(req.body);
 
@@ -43,6 +53,7 @@ const refreshToken = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  register,
   login,
   loginAdminPanel,
   loginDeveloperPanel,

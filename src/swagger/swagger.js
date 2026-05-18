@@ -108,12 +108,44 @@ const options = {
             },
           },
         },
+        RegisterRequest: {
+          type: 'object',
+          required: ['firstName', 'lastName', 'email', 'password'],
+          properties: {
+            firstName: {
+              type: 'string',
+              example: 'John',
+            },
+            lastName: {
+              type: 'string',
+              example: 'Doe',
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              example: 'john@example.com',
+            },
+            password: {
+              type: 'string',
+              format: 'password',
+              example: 'Password@123',
+            },
+          },
+        },
         AuthUser: {
           type: 'object',
           properties: {
             id: {
               type: 'integer',
               example: 1,
+            },
+            firstName: {
+              type: 'string',
+              example: 'John',
+            },
+            lastName: {
+              type: 'string',
+              example: 'Doe',
             },
             fullName: {
               type: 'string',

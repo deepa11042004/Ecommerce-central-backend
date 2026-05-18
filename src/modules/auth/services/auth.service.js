@@ -9,6 +9,36 @@ const {
 const UserRepository = require('../repositories/user.repository');
 
 class AuthService {
+  static async register({ firstName, lastName, email, password }) {
+    const existingUser = await UserRepository.findByEmail(email);
+
+    if (existingUser) {
+      throw ApiError.badRequest('Email already exists');
+    }
+
+    const customerRole = await UserRepository.findRoleByName(ROLES.CUSTOMER);
+
+    if (!customerRole) {
+      throw ApiError.badRequest('Customer role is not configured');
+    }
+
+    const fullName = `${firstName} ${lastName}`.trim();
+    const passwordHash = await bcrypt.hash(password, Number(process.env.BCRYPT_SALT_ROUNDS || 10));
+
+    const createdUser = await UserRepository.create({
+      firstName,
+      lastName,
+      fullName,
+      email,
+      passwordHash,
+      roleId: customerRole.id,
+    });
+
+    const user = await UserRepository.findById(createdUser.id);
+
+    return this.buildAuthResponse(user);
+  }
+
   static async login({ email, password }) {
     const user = await this.validateCredentials({ email, password });
 
@@ -92,6 +122,8 @@ class AuthService {
   static toAuthUser(user) {
     return {
       id: user.id,
+      firstName: user.firstName || null,
+      lastName: user.lastName || null,
       fullName: user.fullName,
       email: user.email,
       role: user.role?.name || null,

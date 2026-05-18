@@ -1,6 +1,10 @@
 const { User, Role, Permission } = require('../../../database/models');
 
 class UserRepository {
+  static create(payload) {
+    return User.create(payload);
+  }
+
   static findByEmail(email) {
     return User.findOne({
       where: { email },
@@ -18,6 +22,10 @@ class UserRepository {
         },
       ],
     });
+  }
+
+  static findRoleByName(name) {
+    return Role.findOne({ where: { name } });
   }
 
   static findById(id) {
