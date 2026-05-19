@@ -7,11 +7,14 @@ const router = express.Router();
 
 /**
  * @swagger
- * /admin:
+ * /auth/admin:
  *   post:
  *     tags: [Auth]
  *     summary: Admin panel login
- *     description: "Allows only admin and super_admin users to login for the admin panel."
+ *     description: |
+ *       Login endpoint restricted to admin and super_admin roles only.
+ *       Returns 403 if the account role is not admin or super_admin.
+ *       Seeded credential — superadmin@peltown.local / SuperAdmin!Peltown#2026X9
  *     requestBody:
  *       required: true
  *       content:
@@ -19,8 +22,8 @@ const router = express.Router();
  *           schema:
  *             $ref: '#/components/schemas/LoginRequest'
  *           example:
- *             email: admin@starter.local
- *             password: Password@123
+ *             email: superadmin@peltown.local
+ *             password: SuperAdmin!Peltown#2026X9
  *     responses:
  *       200:
  *         description: Admin panel login successful
@@ -28,8 +31,14 @@ const router = express.Router();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/LoginSuccessResponse'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Account cannot access admin panel
+ *         description: Account role cannot access the admin panel
  *         content:
  *           application/json:
  *             schema:
@@ -39,11 +48,14 @@ router.post('/admin', validate(loginSchema), controller.loginAdminPanel);
 
 /**
  * @swagger
- * /developer:
+ * /auth/developer:
  *   post:
  *     tags: [Auth]
  *     summary: Developer panel login
- *     description: "Allows only developer users to login for the developer panel."
+ *     description: |
+ *       Login endpoint restricted to the developer role only.
+ *       Returns 403 if the account role is not developer.
+ *       Seeded credential — developer@peltown.local / Dev!Peltown#2026X9
  *     requestBody:
  *       required: true
  *       content:
@@ -51,8 +63,8 @@ router.post('/admin', validate(loginSchema), controller.loginAdminPanel);
  *           schema:
  *             $ref: '#/components/schemas/LoginRequest'
  *           example:
- *             email: developer@starter.local
- *             password: Password@123
+ *             email: developer@peltown.local
+ *             password: Dev!Peltown#2026X9
  *     responses:
  *       200:
  *         description: Developer panel login successful
@@ -60,8 +72,14 @@ router.post('/admin', validate(loginSchema), controller.loginAdminPanel);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/LoginSuccessResponse'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Account cannot access developer panel
+ *         description: Account role cannot access the developer panel
  *         content:
  *           application/json:
  *             schema:

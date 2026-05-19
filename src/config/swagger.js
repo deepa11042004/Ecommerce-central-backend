@@ -1,6 +1,6 @@
 const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
-const env = require('../config/env');
+const env = require('./env');
 
 const normalizedPublicServerUrl = env.PUBLIC_SERVER_URL
   ? env.PUBLIC_SERVER_URL.replace(/\/$/, '')
@@ -128,7 +128,7 @@ const options = {
             password: {
               type: 'string',
               format: 'password',
-              example: 'Password@123',
+              example: 'ChangeMe#12345',
             },
           },
         },
@@ -153,7 +153,7 @@ const options = {
             },
             email: {
               type: 'string',
-              example: 'developer@starter.local',
+              example: 'developer@peltown.local',
             },
             role: {
               type: 'string',

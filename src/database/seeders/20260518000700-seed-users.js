@@ -6,6 +6,9 @@ const bcrypt = require('bcryptjs');
 const { Op, QueryTypes } = require('sequelize');
 const { ROLES } = require('../../constants/roles');
 
+const DEFAULT_SEED_DEVELOPER_EMAIL = 'developer@example.com';
+const DEFAULT_SEED_SUPER_ADMIN_EMAIL = 'superadmin@example.com';
+
 /** @type {import('sequelize-cli').Seeder} */
 module.exports = {
   async up(queryInterface) {
@@ -21,15 +24,21 @@ module.exports = {
     }, {});
 
     const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
-    const passwordHash = await bcrypt.hash('Password@123', saltRounds);
+    const developerEmail = process.env.SEED_DEVELOPER_EMAIL || DEFAULT_SEED_DEVELOPER_EMAIL;
+    const developerPassword = process.env.SEED_DEVELOPER_PASSWORD || 'Dev!loper#2026';
+    const superAdminEmail = process.env.SEED_SUPER_ADMIN_EMAIL || DEFAULT_SEED_SUPER_ADMIN_EMAIL;
+    const superAdminPassword = process.env.SEED_SUPER_ADMIN_PASSWORD || 'SuperAdmin!#2026X';
+
+    const developerPasswordHash = await bcrypt.hash(developerPassword, saltRounds);
+    const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, saltRounds);
 
     const users = [
       {
         first_name: 'Developer',
-        last_name: 'User',
-        full_name: 'Developer User',
-        email: 'developer@starter.local',
-        password_hash: passwordHash,
+        last_name: 'Engineer',
+        full_name: 'Developer Engineer',
+        email: developerEmail,
+        password_hash: developerPasswordHash,
         role_id: roleIdByName[ROLES.DEVELOPER],
         created_at: now,
         updated_at: now,
@@ -38,29 +47,9 @@ module.exports = {
         first_name: 'Super',
         last_name: 'Admin',
         full_name: 'Super Admin User',
-        email: 'superadmin@starter.local',
-        password_hash: passwordHash,
+        email: superAdminEmail,
+        password_hash: superAdminPasswordHash,
         role_id: roleIdByName[ROLES.SUPER_ADMIN],
-        created_at: now,
-        updated_at: now,
-      },
-      {
-        first_name: 'Admin',
-        last_name: 'User',
-        full_name: 'Admin User',
-        email: 'admin@starter.local',
-        password_hash: passwordHash,
-        role_id: roleIdByName[ROLES.ADMIN],
-        created_at: now,
-        updated_at: now,
-      },
-      {
-        first_name: 'Customer',
-        last_name: 'User',
-        full_name: 'Customer User',
-        email: 'customer@starter.local',
-        password_hash: passwordHash,
-        role_id: roleIdByName[ROLES.CUSTOMER],
         created_at: now,
         updated_at: now,
       },
@@ -73,14 +62,11 @@ module.exports = {
     await queryInterface.bulkDelete(
       'users',
       {
-        email: {
-          [Op.in]: [
-            'developer@starter.local',
-            'superadmin@starter.local',
-            'admin@starter.local',
-            'customer@starter.local',
-          ],
-        },
+        [Op.or]: [
+          { email: process.env.SEED_DEVELOPER_EMAIL || DEFAULT_SEED_DEVELOPER_EMAIL },
+          { email: process.env.SEED_SUPER_ADMIN_EMAIL || DEFAULT_SEED_SUPER_ADMIN_EMAIL },
+          { email: { [Op.like]: '%@starter.local' } },
+        ],
       },
       {}
     );

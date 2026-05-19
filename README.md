@@ -322,14 +322,15 @@ npm run dev
 
 ## Seeder Test Accounts
 
-Default seeded password for all users:
-- `Password@123`
+Seeded credentials (can be overridden in `.env`):
+- `SEED_DEVELOPER_EMAIL=developer@peltown.local`
+- `SEED_DEVELOPER_PASSWORD=Dev!Peltown#2026X9`
+- `SEED_SUPER_ADMIN_EMAIL=superadmin@peltown.local`
+- `SEED_SUPER_ADMIN_PASSWORD=SuperAdmin!Peltown#2026X9`
 
 Accounts:
-- `developer@starter.local`
-- `superadmin@starter.local`
-- `admin@starter.local`
-- `customer@starter.local`
+- `developer@peltown.local` (role: `developer`)
+- `superadmin@peltown.local` (role: `super_admin`)
 
 ## Scripts
 

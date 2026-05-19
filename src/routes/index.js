@@ -27,7 +27,7 @@ router.get('/health', (req, res) => {
 });
 
 router.use('/auth', authRoutes);
-router.use('/', panelAuthRoutes);
+router.use('/auth', panelAuthRoutes);
 router.use('/products', productRoutes);
 
 module.exports = router;

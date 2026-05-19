@@ -42,6 +42,10 @@ class AuthService {
   static async login({ email, password }) {
     const user = await this.validateCredentials({ email, password });
 
+    if (user.role?.name !== ROLES.CUSTOMER) {
+      throw ApiError.forbidden('Use your dedicated panel login endpoint');
+    }
+
     return this.buildAuthResponse(user);
   }
 

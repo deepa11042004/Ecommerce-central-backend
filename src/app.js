@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const env = require('./config/env');
 const routes = require('./routes');
-const swaggerSpec = require('./swagger/swagger');
+const swaggerSpec = require('./config/swagger');
 const notFoundMiddleware = require('./middleware/notFound.middleware');
 const errorMiddleware = require('./middleware/error.middleware');
 
