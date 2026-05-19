@@ -32,9 +32,9 @@ const options = {
     openapi: '3.0.3',
     info: {
       title: 'Reusable Ecommerce Backend Starter API',
-      version: '1.0.0',
+      version: '2.0.0',
       description:
-        'Production-grade reusable ecommerce backend starter. Architecture: Route -> Controller -> Service -> Repository -> Sequelize Model. RBAC roles: developer, super_admin, admin, user.',
+        'Production-grade reusable ecommerce backend. Architecture: Route -> Controller -> Service -> Repository -> Sequelize Model. RBAC roles: developer, super_admin, admin, customer.',
     },
     servers,
     tags: [
@@ -44,7 +44,19 @@ const options = {
       },
       {
         name: 'Products',
-        description: 'Product management endpoints with RBAC',
+        description: 'Generalized product management endpoints with dynamic attributes and variants',
+      },
+      {
+        name: 'Categories',
+        description: 'Nested category tree and category assignment endpoints',
+      },
+      {
+        name: 'Attributes',
+        description: 'Dynamic reusable product attribute structures (documented in product payloads)',
+      },
+      {
+        name: 'Variants',
+        description: 'Sellable variant and inventory structures (documented in product payloads)',
       },
     ],
     components: {
@@ -74,11 +86,11 @@ const options = {
                 properties: {
                   field: {
                     type: 'string',
-                    example: 'email',
+                    example: 'body.title',
                   },
                   message: {
                     type: 'string',
-                    example: '"email" must be a valid email',
+                    example: '"title" is required',
                   },
                 },
               },
@@ -141,30 +153,32 @@ const options = {
             },
             firstName: {
               type: 'string',
+              nullable: true,
               example: 'John',
             },
             lastName: {
               type: 'string',
+              nullable: true,
               example: 'Doe',
             },
             fullName: {
               type: 'string',
-              example: 'Developer User',
+              example: 'John Doe',
             },
             email: {
               type: 'string',
-              example: 'developer@peltown.local',
+              example: 'john@example.com',
             },
             role: {
               type: 'string',
-              example: 'developer',
+              example: 'customer',
             },
             permissions: {
               type: 'array',
               items: {
                 type: 'string',
               },
-              example: ['*'],
+              example: ['product.read'],
             },
           },
         },
@@ -195,47 +209,164 @@ const options = {
             },
           },
         },
+        BrandSummary: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Generic Supply Co' },
+            slug: { type: 'string', example: 'generic-supply-co' },
+          },
+        },
+        CategoryNode: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Electronics' },
+            slug: { type: 'string', example: 'electronics' },
+            description: { type: 'string', nullable: true },
+            status: { type: 'string', enum: ['active', 'inactive'] },
+            parentId: { type: 'integer', nullable: true },
+            sortOrder: { type: 'integer', example: 0 },
+            children: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/CategoryNode',
+              },
+            },
+          },
+        },
+        AttributeValue: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 11 },
+            value: { type: 'string', example: 'Black' },
+            valueSlug: { type: 'string', example: 'black' },
+          },
+        },
+        AttributeDefinition: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 3 },
+            name: { type: 'string', example: 'Color' },
+            code: { type: 'string', example: 'color' },
+            inputType: { type: 'string', enum: ['select', 'text', 'number', 'boolean'] },
+            isFilterable: { type: 'boolean', example: true },
+            isVariantAxis: { type: 'boolean', example: true },
+            values: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/AttributeValue',
+              },
+            },
+          },
+        },
+        ProductAttributeSelection: {
+          type: 'object',
+          properties: {
+            attributeId: { type: 'integer', example: 3 },
+            attributeCode: { type: 'string', example: 'color' },
+            attributeValueId: { type: 'integer', example: 11 },
+            value: { type: 'string', example: 'Black' },
+            valueSlug: { type: 'string', example: 'black' },
+          },
+        },
+        Inventory: {
+          type: 'object',
+          properties: {
+            quantity: { type: 'integer', example: 25 },
+            reservedQuantity: { type: 'integer', example: 0 },
+            lowStockThreshold: { type: 'integer', nullable: true, example: 5 },
+            allowBackorder: { type: 'boolean', example: false },
+          },
+        },
+        ProductVariant: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 301 },
+            sku: { type: 'string', example: 'WH-BLK-128' },
+            title: { type: 'string', nullable: true, example: 'Black / 128GB' },
+            price: { type: 'number', format: 'float', example: 129.99 },
+            comparePrice: { type: 'number', format: 'float', nullable: true, example: 149.99 },
+            costPrice: { type: 'number', format: 'float', nullable: true, example: 80 },
+            status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
+            image: { type: 'string', nullable: true, example: 'https://cdn.example.com/variant.jpg' },
+            barcode: { type: 'string', nullable: true, example: null },
+            inventory: {
+              $ref: '#/components/schemas/Inventory',
+            },
+            attributeValues: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductAttributeSelection',
+              },
+            },
+          },
+        },
+        ProductMedia: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            url: { type: 'string', example: 'https://cdn.example.com/products/item.jpg' },
+            mediaType: { type: 'string', enum: ['image', 'video', 'document', 'external'] },
+            altText: { type: 'string', nullable: true, example: 'Front image' },
+            position: { type: 'integer', example: 0 },
+            variantId: { type: 'integer', nullable: true, example: null },
+          },
+        },
+        ProductMetaEntry: {
+          type: 'object',
+          properties: {
+            metaKey: { type: 'string', example: 'warrantyMonths' },
+            metaValue: { type: 'string', nullable: true, example: '12' },
+            valueType: { type: 'string', enum: ['string', 'number', 'boolean', 'json'], example: 'number' },
+          },
+        },
         Product: {
           type: 'object',
           properties: {
-            id: {
-              type: 'integer',
-              example: 1,
+            id: { type: 'integer', example: 1 },
+            title: { type: 'string', example: 'Wireless Headphones' },
+            slug: { type: 'string', example: 'wireless-headphones' },
+            description: { type: 'string' },
+            shortDescription: { type: 'string', nullable: true },
+            skuPrefix: { type: 'string', nullable: true, example: 'WH' },
+            productType: { type: 'string', enum: ['simple', 'configurable', 'variant'], example: 'variant' },
+            status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
+            thumbnail: { type: 'string', nullable: true },
+            seoTitle: { type: 'string', nullable: true },
+            seoDescription: { type: 'string', nullable: true },
+            minPrice: { type: 'number', format: 'float', nullable: true, example: 129.99 },
+            totalStock: { type: 'integer', nullable: true, example: 39 },
+            brand: { $ref: '#/components/schemas/BrandSummary' },
+            categories: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/CategoryNode',
+              },
             },
-            title: {
-              type: 'string',
-              example: 'iPhone 15 Pro',
+            productAttributes: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/AttributeDefinition',
+              },
             },
-            slug: {
-              type: 'string',
-              example: 'iphone-15-pro',
+            variants: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductVariant',
+              },
             },
-            description: {
-              type: 'string',
-              example: 'Latest iPhone model with improved camera and performance.',
+            media: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductMedia',
+              },
             },
-            sku: {
-              type: 'string',
-              example: 'IP15P-256-BLK',
-            },
-            price: {
-              type: 'number',
-              format: 'float',
-              example: 1299.99,
-            },
-            stock: {
-              type: 'integer',
-              example: 20,
-            },
-            status: {
-              type: 'string',
-              enum: ['active', 'inactive'],
-              example: 'active',
-            },
-            thumbnail: {
-              type: 'string',
-              nullable: true,
-              example: 'https://cdn.example.com/products/iphone-15-pro.jpg',
+            metaEntries: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductMetaEntry',
+              },
             },
             createdAt: {
               type: 'string',
@@ -249,65 +380,139 @@ const options = {
         },
         ProductCreateRequest: {
           type: 'object',
-          required: ['title', 'description', 'sku', 'price', 'stock'],
+          required: ['title', 'description', 'productType'],
           properties: {
-            title: {
-              type: 'string',
+            title: { type: 'string', example: 'Generic Product' },
+            slug: { type: 'string', example: 'generic-product' },
+            description: { type: 'string', example: 'Generalized product body.' },
+            shortDescription: { type: 'string', example: 'Short preview' },
+            skuPrefix: { type: 'string', example: 'GP' },
+            brandId: { type: 'integer', nullable: true, example: 1 },
+            productType: { type: 'string', enum: ['simple', 'configurable', 'variant'], example: 'variant' },
+            status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
+            thumbnail: { type: 'string', example: 'https://cdn.example.com/products/generic.jpg' },
+            seoTitle: { type: 'string', example: 'SEO title' },
+            seoDescription: { type: 'string', example: 'SEO description' },
+            categoryIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              example: [1, 2],
             },
-            slug: {
-              type: 'string',
+            attributes: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Color' },
+                  code: { type: 'string', example: 'color' },
+                  inputType: { type: 'string', enum: ['select', 'text', 'number', 'boolean'] },
+                  isFilterable: { type: 'boolean', example: true },
+                  isVariantAxis: { type: 'boolean', example: true },
+                  isRequired: { type: 'boolean', example: true },
+                  values: {
+                    type: 'array',
+                    items: {
+                      oneOf: [
+                        { type: 'string', example: 'Red' },
+                        {
+                          type: 'object',
+                          properties: {
+                            value: { type: 'string', example: 'Red' },
+                            slug: { type: 'string', example: 'red' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
             },
-            description: {
-              type: 'string',
+            variants: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  sku: { type: 'string', example: 'GP-RED-001' },
+                  price: { type: 'number', format: 'float', example: 1000 },
+                  stock: { type: 'integer', example: 10 },
+                  status: { type: 'string', enum: ['active', 'inactive'] },
+                  attributeValues: {
+                    type: 'array',
+                    items: {
+                      oneOf: [
+                        { type: 'string', example: 'color:red' },
+                        {
+                          type: 'object',
+                          properties: {
+                            code: { type: 'string', example: 'color' },
+                            value: { type: 'string', example: 'Red' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
             },
-            sku: {
-              type: 'string',
+            media: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  url: { type: 'string', example: 'https://cdn.example.com/products/generic-main.jpg' },
+                  mediaType: { type: 'string', enum: ['image', 'video', 'document', 'external'] },
+                  altText: { type: 'string', example: 'Main image' },
+                  variantSku: { type: 'string', example: 'GP-RED-001' },
+                },
+              },
             },
-            price: {
-              type: 'number',
-              format: 'float',
-            },
-            stock: {
-              type: 'integer',
-            },
-            status: {
-              type: 'string',
-              enum: ['active', 'inactive'],
-              default: 'active',
-            },
-            thumbnail: {
-              type: 'string',
+            meta: {
+              type: 'object',
+              additionalProperties: true,
+              example: {
+                customKey1: 'value',
+                customKey2: 'value',
+              },
             },
           },
         },
         ProductUpdateRequest: {
           type: 'object',
           properties: {
-            title: {
-              type: 'string',
+            title: { type: 'string' },
+            description: { type: 'string' },
+            shortDescription: { type: 'string' },
+            status: { type: 'string', enum: ['active', 'inactive'] },
+            categoryIds: {
+              type: 'array',
+              items: { type: 'integer' },
             },
-            slug: {
-              type: 'string',
+            attributes: {
+              type: 'array',
+              items: { type: 'object' },
             },
-            description: {
-              type: 'string',
+            variants: {
+              type: 'array',
+              items: { type: 'object' },
             },
-            sku: {
-              type: 'string',
+            media: {
+              type: 'array',
+              items: { type: 'object' },
             },
-            price: {
-              type: 'number',
-              format: 'float',
-            },
-            stock: {
-              type: 'integer',
-            },
-            status: {
-              type: 'string',
-              enum: ['active', 'inactive'],
-            },
-            thumbnail: {
-              type: 'string',
+            meta: {
+              oneOf: [
+                { type: 'object', additionalProperties: true },
+                {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      key: { type: 'string' },
+                      value: {},
+                    },
+                  },
+                },
+              ],
             },
           },
         },
@@ -356,7 +561,7 @@ const options = {
                     },
                     limit: {
                       type: 'integer',
-                      example: 10,
+                      example: 20,
                     },
                     totalItems: {
                       type: 'integer',
@@ -364,10 +569,29 @@ const options = {
                     },
                     totalPages: {
                       type: 'integer',
-                      example: 5,
+                      example: 3,
                     },
                   },
                 },
+              },
+            },
+          },
+        },
+        CategoryTreeSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              example: true,
+            },
+            message: {
+              type: 'string',
+              example: 'Category tree fetched successfully',
+            },
+            data: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/CategoryNode',
               },
             },
           },

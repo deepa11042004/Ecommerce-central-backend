@@ -18,10 +18,12 @@ const router = express.Router();
  * /products:
  *   get:
  *     tags: [Products]
- *     summary: Fetch products with pagination, search, filtering, sorting
+ *     summary: Fetch products with generalized filtering
  *     description: |
- *       Access: developer, super_admin, admin, user.
- *       Supports query params: page, limit, search, status, sort.
+ *       Access: developer, super_admin, admin, customer.
+ *       Supports pagination, keyword search, category filter, dynamic attribute filter,
+ *       product type filter, status filter, and sorting.
+ *       Required permission: product.read
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -37,12 +39,12 @@ const router = express.Router();
  *           type: integer
  *           minimum: 1
  *           maximum: 100
- *         example: 10
+ *         example: 20
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
- *         example: iphone
+ *         example: wireless
  *       - in: query
  *         name: status
  *         schema:
@@ -50,10 +52,31 @@ const router = express.Router();
  *           enum: [active, inactive]
  *         example: active
  *       - in: query
+ *         name: productType
+ *         schema:
+ *           type: string
+ *           enum: [simple, configurable, variant]
+ *         example: variant
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         example: electronics
+ *       - in: query
+ *         name: attribute
+ *         schema:
+ *           oneOf:
+ *             - type: string
+ *             - type: array
+ *               items:
+ *                 type: string
+ *         description: Dynamic filter using attribute:value format. Can be repeated.
+ *         example: color:red
+ *       - in: query
  *         name: sort
  *         schema:
  *           type: string
- *         description: Supported values include price_desc, price_asc, createdAt_desc, stock_asc
+ *         description: price_desc, stock_asc, title_asc, createdAt_desc
  *         example: price_desc
  *     responses:
  *       200:
@@ -73,11 +96,52 @@ router.get('/', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProductsSche
 
 /**
  * @swagger
+ * /products/search:
+ *   get:
+ *     tags: [Products]
+ *     summary: Search products endpoint
+ *     description: |
+ *       Access: developer, super_admin, admin, customer.
+ *       Behavior is identical to GET /products but exposed as explicit search endpoint.
+ *       Required permission: product.read
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         example: compatible
+ *       - in: query
+ *         name: attribute
+ *         schema:
+ *           type: string
+ *         example: language:english
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         example: books
+ *     responses:
+ *       200:
+ *         description: Search result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductListSuccessResponse'
+ */
+router.get('/search', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProductsSchema), controller.search);
+
+/**
+ * @swagger
  * /products:
  *   post:
  *     tags: [Products]
- *     summary: Create product
- *     description: "Access: developer, super_admin, admin."
+ *     summary: Create generalized product
+ *     description: |
+ *       Access: developer, super_admin, admin.
+ *       Creates base product + optional categories + dynamic attributes + optional variants + media + metadata.
+ *       Required permission: product.create
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -107,8 +171,10 @@ router.post('/', auth(), can(PERMISSIONS.PRODUCT_CREATE), validate(createProduct
  * /products/{id}:
  *   get:
  *     tags: [Products]
- *     summary: Fetch product by id
- *     description: "Access: developer, super_admin, admin, user."
+ *     summary: Fetch product detail
+ *     description: |
+ *       Access: developer, super_admin, admin, customer.
+ *       Required permission: product.read
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -138,8 +204,11 @@ router.get('/:id', auth(), can(PERMISSIONS.PRODUCT_READ), validate(getProductByI
  * /products/{id}:
  *   put:
  *     tags: [Products]
- *     summary: Update product
- *     description: "Access: developer, super_admin, admin."
+ *     summary: Update generalized product
+ *     description: |
+ *       Access: developer, super_admin, admin.
+ *       Supports partial update of base product, categories, attributes, variants, media, and metadata.
+ *       Required permission: product.update
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -176,7 +245,9 @@ router.put('/:id', auth(), can(PERMISSIONS.PRODUCT_UPDATE), validate(updateProdu
  *   delete:
  *     tags: [Products]
  *     summary: Delete product
- *     description: "Access: developer, super_admin, admin."
+ *     description: |
+ *       Access: developer, super_admin, admin.
+ *       Required permission: product.delete
  *     security:
  *       - bearerAuth: []
  *     parameters:

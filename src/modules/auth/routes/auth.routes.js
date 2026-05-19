@@ -10,8 +10,8 @@ const router = express.Router();
  * /auth/register:
  *   post:
  *     tags: [Auth]
- *     summary: Register a user account
- *     description: Creates a user account with first name, last name, email, and password.
+ *     summary: Register a customer account
+ *     description: Creates a customer account with first name, last name, email, and password.
  *     requestBody:
  *       required: true
  *       content:
@@ -44,11 +44,11 @@ router.post('/register', validate(registerSchema), controller.register);
  * /auth/login:
  *   post:
  *     tags: [Auth]
- *     summary: User login
+ *     summary: Customer login
  *     description: |
- *       Authenticate user accounts with email and password.
+ *       Authenticate customer accounts with email and password.
  *       Admin/super_admin must use POST /admin and developer must use POST /developer.
- *       User accounts are not seeded by default. Register first via POST /register.
+ *       Customer accounts are not seeded by default. Register first via POST /register.
  *     requestBody:
  *       required: true
  *       content:

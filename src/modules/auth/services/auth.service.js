@@ -16,10 +16,10 @@ class AuthService {
       throw ApiError.badRequest('Email already exists');
     }
 
-    const userRole = await UserRepository.findRoleByName(ROLES.USER);
+    const userRole = await UserRepository.findRoleByName(ROLES.CUSTOMER);
 
     if (!userRole) {
-      throw ApiError.badRequest('User role is not configured');
+      throw ApiError.badRequest('Customer role is not configured');
     }
 
     const fullName = `${firstName} ${lastName}`.trim();
@@ -42,7 +42,7 @@ class AuthService {
   static async login({ email, password }) {
     const user = await this.validateCredentials({ email, password });
 
-    if (user.role?.name !== ROLES.USER) {
+    if (user.role?.name !== ROLES.CUSTOMER) {
       throw ApiError.forbidden('Use your dedicated panel login endpoint');
     }
 

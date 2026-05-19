@@ -22,6 +22,16 @@ const findAll = asyncHandler(async (req, res) => {
   });
 });
 
+const search = asyncHandler(async (req, res) => {
+  const result = await ProductService.search(req.query);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Products fetched successfully',
+    data: result,
+  });
+});
+
 const findOne = asyncHandler(async (req, res) => {
   const product = await ProductService.getById(req.params.id);
 
@@ -55,6 +65,7 @@ const remove = asyncHandler(async (req, res) => {
 module.exports = {
   create,
   findAll,
+  search,
   findOne,
   update,
   remove,

@@ -1,6 +1,6 @@
 const express = require('express');
 const { routes: authRoutes, panelRoutes: panelAuthRoutes } = require('../modules/auth');
-const { routes: productRoutes } = require('../modules/product');
+const { routes: productRoutes, categoryRoutes } = require('../modules/product');
 
 const router = express.Router();
 
@@ -29,5 +29,6 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/auth', panelAuthRoutes);
 router.use('/products', productRoutes);
+router.use('/categories', categoryRoutes);
 
 module.exports = router;

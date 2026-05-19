@@ -20,18 +20,26 @@ const defineProductModel = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: false,
       },
-      sku: {
+      shortDescription: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        field: 'short_description',
+      },
+      skuPrefix: {
         type: DataTypes.STRING(80),
-        allowNull: false,
-        unique: true,
+        allowNull: true,
+        field: 'sku_prefix',
       },
-      price: {
-        type: DataTypes.DECIMAL(12, 2),
-        allowNull: false,
+      brandId: {
+        type: DataTypes.BIGINT.UNSIGNED,
+        allowNull: true,
+        field: 'brand_id',
       },
-      stock: {
-        type: DataTypes.INTEGER.UNSIGNED,
+      productType: {
+        type: DataTypes.ENUM('simple', 'configurable', 'variant'),
         allowNull: false,
+        defaultValue: 'simple',
+        field: 'product_type',
       },
       status: {
         type: DataTypes.ENUM('active', 'inactive'),
@@ -41,6 +49,16 @@ const defineProductModel = (sequelize, DataTypes) => {
       thumbnail: {
         type: DataTypes.STRING(255),
         allowNull: true,
+      },
+      seoTitle: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        field: 'seo_title',
+      },
+      seoDescription: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+        field: 'seo_description',
       },
     },
     {
@@ -52,18 +70,66 @@ const defineProductModel = (sequelize, DataTypes) => {
           fields: ['slug'],
         },
         {
-          unique: true,
-          fields: ['sku'],
-        },
-        {
           fields: ['status'],
         },
         {
           fields: ['title'],
         },
+        {
+          fields: ['brand_id'],
+        },
+        {
+          fields: ['product_type'],
+        },
       ],
     }
   );
+
+  Product.associate = (models) => {
+    Product.belongsTo(models.Brand, {
+      foreignKey: 'brandId',
+      as: 'brand',
+    });
+
+    Product.belongsToMany(models.Category, {
+      through: models.ProductCategory,
+      foreignKey: 'productId',
+      otherKey: 'categoryId',
+      as: 'categories',
+    });
+
+    Product.hasMany(models.ProductCategory, {
+      foreignKey: 'productId',
+      as: 'categoryLinks',
+    });
+
+    Product.belongsToMany(models.Attribute, {
+      through: models.ProductAttribute,
+      foreignKey: 'productId',
+      otherKey: 'attributeId',
+      as: 'attributes',
+    });
+
+    Product.hasMany(models.ProductAttribute, {
+      foreignKey: 'productId',
+      as: 'productAttributes',
+    });
+
+    Product.hasMany(models.ProductVariant, {
+      foreignKey: 'productId',
+      as: 'variants',
+    });
+
+    Product.hasMany(models.ProductMedia, {
+      foreignKey: 'productId',
+      as: 'media',
+    });
+
+    Product.hasMany(models.ProductMeta, {
+      foreignKey: 'productId',
+      as: 'metaEntries',
+    });
+  };
 
   return Product;
 };

@@ -1,13 +1,12 @@
-# Reusable Ecommerce Backend Starter (Phase 1)
+# Reusable Ecommerce Backend Starter (Generalized Product Engine)
 
 Production-grade reusable ecommerce backend template for per-client deployments.
 
-This starter is designed for copy-paste reuse across projects where each client has:
-- Separate backend deployment
-- Separate database
-- Separate frontend
-
-It is intentionally **not** SaaS and **not** multi-tenant.
+This backend is intentionally not SaaS and not multi-tenant.
+Each ecommerce client runs:
+- separate deployment
+- separate backend
+- separate database
 
 ## Tech Stack
 
@@ -16,338 +15,301 @@ It is intentionally **not** SaaS and **not** multi-tenant.
 - MySQL
 - Sequelize ORM
 - JWT authentication
-- Swagger (OpenAPI) documentation
+- Swagger (OpenAPI)
 - Joi validation
 
 ## Architecture
 
-This project follows clean modular architecture with strict layer boundaries:
+Strict flow per module:
 
-`Route -> Controller -> Service -> Repository -> Sequelize Model`
+Route -> Controller -> Service -> Repository -> Sequelize Model
 
-### Design Principles Applied
-
-- MVC (feature modules)
+Applied patterns:
+- MVC (modular by domain)
 - Service Layer Pattern
 - Repository Pattern
-- RBAC (Role Based Access Control)
+- RBAC
+- Migration-first DB workflow
 - Thin controllers
-- Reusable middleware
-- Centralized error handling
-- Migration-first database workflow (no `sequelize.sync()`)
+- Centralized error + response handling
 
-## Folder Structure
+## Product Engine Goals
 
-```text
-.
-|-- .env.example
-|-- .sequelizerc
-|-- package.json
-|-- README.md
-`-- src
-    |-- app.js
-    |-- server.js
-    |-- config
-    |   `-- env.js
-    |-- constants
-    |   |-- permissions.js
-    |   `-- roles.js
-    |-- core
-    |   |-- errors
-    |   |   `-- ApiError.js
-    |   `-- http
-    |       `-- response.js
-    |-- database
-    |   |-- config
-    |   |   `-- config.js
-    |   |-- migrations
-    |   |   |-- 20260518000100-create-roles.js
-    |   |   |-- 20260518000200-create-permissions.js
-    |   |   |-- 20260518000300-create-role-permissions.js
-    |   |   |-- 20260518000400-create-users.js
-    |   |   `-- 20260518000500-create-products.js
-    |   |-- models
-    |   |   `-- index.js
-    |   |-- seeders
-    |   |   |-- 20260518000600-seed-rbac.js
-    |   |   |-- 20260518000700-seed-users.js
-    |   |   `-- 20260518000800-seed-products.js
-    |   `-- sequelize.js
-    |-- middleware
-    |   |-- auth.middleware.js
-    |   |-- error.middleware.js
-    |   |-- notFound.middleware.js
-    |   |-- permission.middleware.js
-    |   `-- validate.middleware.js
-    |-- modules
-    |   |-- auth
-    |   |   |-- controllers
-    |   |   |   `-- auth.controller.js
-    |   |   |-- models
-    |   |   |   `-- user.model.js
-    |   |   |-- repositories
-    |   |   |   `-- user.repository.js
-    |   |   |-- routes
-    |   |   |   `-- auth.routes.js
-    |   |   |-- services
-    |   |   |   `-- auth.service.js
-    |   |   `-- validators
-    |   |       `-- auth.validator.js
-    |   |-- product
-    |   |   |-- controllers
-    |   |   |   `-- product.controller.js
-    |   |   |-- models
-    |   |   |   `-- product.model.js
-    |   |   |-- repositories
-    |   |   |   `-- product.repository.js
-    |   |   |-- routes
-    |   |   |   `-- product.routes.js
-    |   |   |-- services
-    |   |   |   `-- product.service.js
-    |   |   `-- validators
-    |   |       `-- product.validator.js
-    |   `-- rbac
-    |       |-- index.js
-    |       |-- models
-    |       |   |-- permission.model.js
-    |       |   |-- role.model.js
-    |       |   `-- rolePermission.model.js
-    |       |-- repositories
-    |       |   `-- rbac.repository.js
-    |       `-- services
-    |           `-- rbac.service.js
-    |-- routes
-    |   `-- index.js
-    |-- swagger
-    |   `-- swagger.js
-    `-- utils
-        |-- asyncHandler.js
-        |-- jwt.js
-        `-- pagination.js
-```
+The product module is fully generalized and product-type agnostic.
+No schema depends on domain-specific fields.
 
-## Database Schema (Migration-Only)
+Supported out of the box:
+- simple products
+- configurable products
+- variant products
+- dynamic attributes and values
+- optional combinations
+- variant-level pricing
+- variant-level inventory
+- variant media
+- extensible metadata
+- many-to-many category assignment
+- generalized search/filter/sort/pagination
 
-Tables:
+## Database Design (Why Each Table Exists)
 
-1. `roles`
-- `id` (PK)
-- `name` (unique)
-- `created_at`, `updated_at`
+1. roles
+- RBAC role master table.
 
-2. `permissions`
-- `id` (PK)
-- `key` (unique)
-- `description`
-- `created_at`, `updated_at`
+2. permissions
+- permission catalog for fine-grained access control.
 
-3. `role_permissions`
-- `id` (PK)
-- `role_id` (FK -> roles.id)
-- `permission_id` (FK -> permissions.id)
-- unique composite index (`role_id`, `permission_id`)
-- `created_at`, `updated_at`
+3. role_permissions
+- role-permission many-to-many mapping.
 
-4. `users`
-- `id` (PK)
-- `full_name`
-- `email` (unique)
-- `password_hash`
-- `role_id` (FK -> roles.id)
-- `created_at`, `updated_at`
+4. users
+- authenticated users with role assignment.
 
-5. `products`
-- `id` (PK)
-- `title`
-- `slug` (unique)
-- `description`
-- `sku` (unique)
-- `price`
-- `stock`
-- `status` (`active` | `inactive`)
-- `thumbnail`
-- `created_at`, `updated_at`
+5. brands
+- optional reusable brand entity (not product-type specific).
 
-Associations:
-- Role `1:N` Users
-- Role `N:M` Permissions (through role_permissions)
-- Product is standalone for Phase 1
+6. products
+- base product entity only.
+- holds generic product identity and content fields.
+- does not store sellable unit inventory/pricing directly.
 
-## RBAC Matrix
+7. categories
+- reusable nested taxonomy with parent-child relation.
+- supports unlimited depth.
+
+8. product_categories
+- product-category many-to-many mapping.
+- allows multi-category assignment.
+
+9. attributes
+- global dynamic attribute definitions (Color, Size, Voltage, etc.).
+
+10. attribute_values
+- dynamic values per attribute (Red, XL, 220V, etc.).
+
+11. product_attributes
+- links which attributes are enabled for a product.
+- marks required/variant-axis behavior per product.
+
+12. product_variants
+- actual sellable units (SKU, pricing, status, image, barcode).
+
+13. inventory
+- inventory separated from variant for scalability and extensibility.
+
+14. variant_attribute_values
+- dynamic combination mapping for each variant.
+
+15. product_media
+- reusable product and optional variant-level media.
+
+16. product_meta
+- generic extensibility key-value store for future needs without migrations.
+
+## Core Product Fields
+
+products table contains:
+- id
+- title
+- slug
+- description
+- short_description
+- sku_prefix
+- brand_id
+- product_type
+- status
+- thumbnail
+- seo_title
+- seo_description
+- created_at
+- updated_at
+
+## RBAC
 
 Roles:
-- `developer`
-- `super_admin`
-- `admin`
-- `user`
+- developer
+- super_admin
+- admin
+- customer
 
 Permissions:
-- `admin.manage`
-- `product.create`
-- `product.update`
-- `product.delete`
-- `product.read`
+- admin.manage
+- product.create
+- product.update
+- product.delete
+- product.read
 
-Access mapping:
-- `developer` -> `*` (full access)
-- `super_admin` -> `admin.manage`, `product.create`, `product.update`, `product.delete`, `product.read`
-- `admin` -> `product.create`, `product.update`, `product.delete`, `product.read`
-- `user` -> `product.read`
+Middleware:
+- auth()
+- can(permission)
 
-## Authentication
+## API Endpoints
 
-### Implemented
+Base prefix: /api/v1
 
-- `POST /api/v1/auth/login`
-- `POST /api/v1/admin` (admin panel login: admin, super_admin)
-- `POST /api/v1/developer` (developer panel login: developer)
-- `POST /api/v1/auth/refresh-token`
-- JWT access + refresh token generation
-- Password hashing via bcrypt
-- Access token middleware: `auth()`
-- Permission middleware: `can(permission)`
+Auth:
+- POST /auth/register
+- POST /auth/login
+- POST /auth/admin
+- POST /auth/developer
+- POST /auth/refresh-token
 
-### Flow
+Products:
+- POST /products
+- GET /products
+- GET /products/search
+- GET /products/:id
+- PUT /products/:id
+- DELETE /products/:id
 
-1. Login with email/password.
-2. Receive `accessToken` + `refreshToken`.
-3. Use access token in `Authorization: Bearer <token>`.
-4. Use refresh endpoint when access token expires.
+Categories:
+- GET /categories/tree
 
-Refresh token architecture is prepared in a scalable way (separate token utilities and refresh endpoint) and can be extended with token persistence/rotation tables in next phases.
+## Generalized Querying
 
-## Product Module APIs
+Examples:
 
-All product routes are protected by `auth()` and RBAC via `can(...)`.
+- Pagination:
+  GET /api/v1/products?page=1&limit=20
 
-- `POST /api/v1/products` -> `product.create`
-- `GET /api/v1/products` -> `product.read`
-- `GET /api/v1/products/:id` -> `product.read`
-- `PUT /api/v1/products/:id` -> `product.update`
-- `DELETE /api/v1/products/:id` -> `product.delete`
+- Search:
+  GET /api/v1/products?search=wireless
 
-### Query Features (Frontend Ready)
+- Sort:
+  GET /api/v1/products?sort=price_desc
 
-- Pagination: `GET /api/v1/products?page=1&limit=10`
-- Search: `GET /api/v1/products?search=iphone`
-- Filter: `GET /api/v1/products?status=active`
-- Sort: `GET /api/v1/products?sort=price_desc`
+- Status filter:
+  GET /api/v1/products?status=active
 
-Supported sort format:
-- `price_asc`, `price_desc`
-- `stock_asc`, `stock_desc`
-- `title_asc`, `title_desc`
-- `createdAt_asc`, `createdAt_desc`
+- Category slug filter:
+  GET /api/v1/products?category=electronics
 
-## Swagger Documentation
+- Dynamic attribute filter:
+  GET /api/v1/products?attribute=color:red
+  GET /api/v1/products?attribute=color:red&attribute=storage:256gb
 
-- URL: `/api-docs`
+## Product Creation Flow
+
+POST /api/v1/products supports one payload for generalized creation:
+- base product
+- categories
+- attributes and attribute values
+- optional variants
+- optional media
+- optional metadata
+
+Example payload:
+
+```json
+{
+  "title": "Generic Product",
+  "description": "Reusable catalog item",
+  "shortDescription": "Short summary",
+  "skuPrefix": "GP",
+  "productType": "variant",
+  "status": "active",
+  "categoryIds": [1, 2],
+  "attributes": [
+    {
+      "name": "Color",
+      "values": ["Red", "Blue"],
+      "isVariantAxis": true,
+      "isRequired": true
+    },
+    {
+      "name": "Storage",
+      "values": ["128GB", "256GB"],
+      "isVariantAxis": true,
+      "isRequired": true
+    }
+  ],
+  "variants": [
+    {
+      "sku": "GP-RED-128",
+      "price": 1000,
+      "stock": 10,
+      "attributeValues": ["color:red", "storage:128gb"]
+    }
+  ],
+  "media": [
+    {
+      "url": "https://cdn.example.com/products/generic-main.jpg",
+      "mediaType": "image",
+      "altText": "Main image"
+    }
+  ],
+  "meta": {
+    "customKey1": "value",
+    "customKey2": "value"
+  }
+}
+```
+
+## Category Tree Logic
+
+GET /api/v1/categories/tree:
+- reads all categories
+- builds in-memory parent-child map
+- returns nested tree with unlimited depth
+- supports optional status filter
+
+## Swagger
+
+- URL: /api-docs
 - Includes:
-  - Auth APIs
-  - Product APIs
-  - Request/response examples
-  - JWT bearer security schema
-  - Role-based access descriptions per endpoint
+  - auth APIs
+  - product APIs
+  - category API
+  - attribute structures
+  - variant structures
+  - JWT bearer auth
+  - request/response examples
+  - role/permission descriptions
 
-## API Response Format
+## Setup Guide
 
-Success:
-
-```json
-{
-  "success": true,
-  "message": "...",
-  "data": {}
-}
-```
-
-Error:
-
-```json
-{
-  "success": false,
-  "message": "...",
-  "errors": []
-}
-```
-
-## Security
-
-- `helmet`
-- `cors`
-- `express-rate-limit`
-- `bcryptjs` password hashing
-- JWT expiration configuration
-- `.env` driven secrets and runtime config
-
-## Setup Instructions
-
-1. Install dependencies:
+1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Create `.env` from `.env.example` and update values:
-- DB credentials
-- JWT secrets
-- port and rate-limit settings
+2. Configure environment
+- copy .env.example to .env
+- update DB, JWT, and runtime settings
 
-3. Create MySQL database (example):
+3. Create database
 
 ```sql
 CREATE DATABASE ecommerce_starter;
 ```
 
-4. Run migrations:
+4. Run migrations (migration-first, no sequelize.sync)
 
 ```bash
 npm run db:migrate
 ```
 
-5. Seed initial data:
+5. Seed initial data
 
 ```bash
 npm run db:seed
 ```
 
-6. Start development server:
+6. Start server
 
 ```bash
 npm run dev
 ```
 
-7. Open API docs:
-- `http://localhost:5000/api-docs`
-
-## Seeder Test Accounts
-
-Seeded credentials (can be overridden in `.env`):
-- `SEED_DEVELOPER_EMAIL=developer@peltown.local`
-- `SEED_DEVELOPER_PASSWORD=Dev!Peltown#2026X9`
-- `SEED_SUPER_ADMIN_EMAIL=superadmin@peltown.local`
-- `SEED_SUPER_ADMIN_PASSWORD=SuperAdmin!Peltown#2026X9`
-
-Accounts:
-- `developer@peltown.local` (role: `developer`)
-- `superadmin@peltown.local` (role: `super_admin`)
+7. Open docs
+- http://localhost:5000/api-docs
 
 ## Scripts
 
-- `npm run dev` -> Run server in watch mode
-- `npm start` -> Run server
-- `npm run db:migrate` -> Run migrations
-- `npm run db:migrate:undo` -> Undo last migration
-- `npm run db:seed` -> Run all seeders
-- `npm run db:seed:undo` -> Undo all seeders
-
-## Notes for Next Phases
-
-Recommended Phase 2 additions:
-- Refresh token persistence and rotation table
-- Logout + token revocation
-- Admin management module (`admin.manage` usage)
-- Category and inventory modules
-- Orders, carts, payments, shipping modules
-- Unit and integration tests (Jest + Supertest)
-- Audit logs and observability
+- npm run dev
+- npm start
+- npm run db:migrate
+- npm run db:migrate:undo
+- npm run db:seed
+- npm run db:seed:undo
