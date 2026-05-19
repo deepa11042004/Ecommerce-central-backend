@@ -34,7 +34,7 @@ const options = {
       title: 'Reusable Ecommerce Backend Starter API',
       version: '1.0.0',
       description:
-        'Production-grade reusable ecommerce backend starter. Architecture: Route -> Controller -> Service -> Repository -> Sequelize Model. RBAC roles: developer, super_admin, admin, customer.',
+        'Production-grade reusable ecommerce backend starter. Architecture: Route -> Controller -> Service -> Repository -> Sequelize Model. RBAC roles: developer, super_admin, admin, user.',
     },
     servers,
     tags: [

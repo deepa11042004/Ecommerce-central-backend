@@ -20,7 +20,7 @@ const router = express.Router();
  *     tags: [Products]
  *     summary: Fetch products with pagination, search, filtering, sorting
  *     description: |
- *       Access: developer, super_admin, admin, customer.
+ *       Access: developer, super_admin, admin, user.
  *       Supports query params: page, limit, search, status, sort.
  *     security:
  *       - bearerAuth: []
@@ -108,7 +108,7 @@ router.post('/', auth(), can(PERMISSIONS.PRODUCT_CREATE), validate(createProduct
  *   get:
  *     tags: [Products]
  *     summary: Fetch product by id
- *     description: "Access: developer, super_admin, admin, customer."
+ *     description: "Access: developer, super_admin, admin, user."
  *     security:
  *       - bearerAuth: []
  *     parameters:

@@ -179,7 +179,7 @@ Roles:
 - `developer`
 - `super_admin`
 - `admin`
-- `customer`
+- `user`
 
 Permissions:
 - `admin.manage`
@@ -192,7 +192,7 @@ Access mapping:
 - `developer` -> `*` (full access)
 - `super_admin` -> `admin.manage`, `product.create`, `product.update`, `product.delete`, `product.read`
 - `admin` -> `product.create`, `product.update`, `product.delete`, `product.read`
-- `customer` -> `product.read`
+- `user` -> `product.read`
 
 ## Authentication
 

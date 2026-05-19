@@ -1,9 +1,12 @@
 const { sendSuccess } = require('../../../core/http/response');
 const asyncHandler = require('../../../utils/asyncHandler');
 const AuthService = require('../services/auth.service');
+const { getCookie, setAuthCookies } = require('../utils/auth.cookies');
 
 const login = asyncHandler(async (req, res) => {
   const data = await AuthService.login(req.body);
+
+  setAuthCookies(res, data);
 
   return sendSuccess(res, {
     statusCode: 200,
@@ -15,6 +18,8 @@ const login = asyncHandler(async (req, res) => {
 const register = asyncHandler(async (req, res) => {
   const data = await AuthService.register(req.body);
 
+  setAuthCookies(res, data);
+
   return sendSuccess(res, {
     statusCode: 201,
     message: 'Registration successful',
@@ -24,6 +29,8 @@ const register = asyncHandler(async (req, res) => {
 
 const loginAdminPanel = asyncHandler(async (req, res) => {
   const data = await AuthService.loginAdminPanel(req.body);
+
+  setAuthCookies(res, data);
 
   return sendSuccess(res, {
     statusCode: 200,
@@ -35,6 +42,8 @@ const loginAdminPanel = asyncHandler(async (req, res) => {
 const loginDeveloperPanel = asyncHandler(async (req, res) => {
   const data = await AuthService.loginDeveloperPanel(req.body);
 
+  setAuthCookies(res, data);
+
   return sendSuccess(res, {
     statusCode: 200,
     message: 'Developer panel login successful',
@@ -43,7 +52,10 @@ const loginDeveloperPanel = asyncHandler(async (req, res) => {
 });
 
 const refreshToken = asyncHandler(async (req, res) => {
-  const data = await AuthService.refreshToken(req.body.refreshToken);
+  const refreshTokenValue = req.body.refreshToken || getCookie(req, 'refreshToken');
+  const data = await AuthService.refreshToken(refreshTokenValue);
+
+  setAuthCookies(res, data);
 
   return sendSuccess(res, {
     statusCode: 200,

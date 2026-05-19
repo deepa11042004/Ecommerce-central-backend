@@ -2,7 +2,7 @@ const ROLES = Object.freeze({
   DEVELOPER: 'developer',
   SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
-  CUSTOMER: 'customer',
+  USER: 'user',
 });
 
 const ROLE_LIST = Object.freeze(Object.values(ROLES));

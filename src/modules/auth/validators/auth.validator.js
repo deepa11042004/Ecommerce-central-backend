@@ -22,7 +22,7 @@ const registerSchema = Joi.object({
 
 const refreshTokenSchema = Joi.object({
   body: Joi.object({
-    refreshToken: Joi.string().required(),
+    refreshToken: Joi.string().optional(),
   }).required(),
   params: Joi.object({}).optional(),
   query: Joi.object({}).optional(),
