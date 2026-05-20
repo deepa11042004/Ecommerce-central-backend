@@ -1,6 +1,21 @@
 const { sendSuccess } = require('../../../core/http/response');
+const ApiError = require('../../../core/errors/ApiError');
 const asyncHandler = require('../../../utils/asyncHandler');
 const ProductService = require('../services/product.service');
+
+const uploadImage = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw ApiError.badRequest('Image file is required');
+  }
+
+  return sendSuccess(res, {
+    statusCode: 201,
+    message: 'Image uploaded successfully',
+    data: {
+      url: `/uploads/products/${req.file.filename}`,
+    },
+  });
+});
 
 const create = asyncHandler(async (req, res) => {
   const product = await ProductService.create(req.body);
@@ -93,6 +108,7 @@ const remove = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  uploadImage,
   create,
   previewVariantCombinations,
   saveVariants,
