@@ -12,6 +12,36 @@ const create = asyncHandler(async (req, res) => {
   });
 });
 
+const previewVariantCombinations = asyncHandler(async (req, res) => {
+  const preview = await ProductService.previewVariantCombinations(req.params.id, req.body || {});
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Variant combinations generated successfully',
+    data: preview,
+  });
+});
+
+const saveVariants = asyncHandler(async (req, res) => {
+  const product = await ProductService.saveVariants(req.params.id, req.body);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Product variants saved successfully',
+    data: product,
+  });
+});
+
+const resolveVariant = asyncHandler(async (req, res) => {
+  const variant = await ProductService.resolveVariantByAttributes(req.params.id, req.body);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Variant resolved successfully',
+    data: variant,
+  });
+});
+
 const findAll = asyncHandler(async (req, res) => {
   const result = await ProductService.list(req.query);
 
@@ -64,6 +94,9 @@ const remove = asyncHandler(async (req, res) => {
 
 module.exports = {
   create,
+  previewVariantCombinations,
+  saveVariants,
+  resolveVariant,
   findAll,
   search,
   findOne,

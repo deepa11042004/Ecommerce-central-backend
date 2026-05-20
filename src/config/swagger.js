@@ -265,9 +265,44 @@ const options = {
           properties: {
             attributeId: { type: 'integer', example: 3 },
             attributeCode: { type: 'string', example: 'color' },
+            attributeName: { type: 'string', example: 'Color' },
             attributeValueId: { type: 'integer', example: 11 },
             value: { type: 'string', example: 'Black' },
             valueSlug: { type: 'string', example: 'black' },
+            code: { type: 'string', example: 'color' },
+            slug: { type: 'string', example: 'black' },
+          },
+        },
+        ProductAttributeLink: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 22 },
+            productId: { type: 'integer', example: 1 },
+            attributeId: { type: 'integer', example: 3 },
+            isRequired: { type: 'boolean', example: true },
+            isVariantAxis: { type: 'boolean', example: true },
+            attribute: {
+              $ref: '#/components/schemas/AttributeDefinition',
+            },
+          },
+        },
+        VariantAttributeValueLink: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 91 },
+            attributeId: { type: 'integer', example: 3 },
+            attributeValueId: { type: 'integer', example: 11 },
+            attribute: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer', example: 3 },
+                name: { type: 'string', example: 'Color' },
+                code: { type: 'string', example: 'color' },
+              },
+            },
+            attributeValue: {
+              $ref: '#/components/schemas/AttributeValue',
+            },
           },
         },
         Inventory: {
@@ -297,7 +332,7 @@ const options = {
             attributeValues: {
               type: 'array',
               items: {
-                $ref: '#/components/schemas/ProductAttributeSelection',
+                $ref: '#/components/schemas/VariantAttributeValueLink',
               },
             },
           },
@@ -347,7 +382,7 @@ const options = {
             productAttributes: {
               type: 'array',
               items: {
-                $ref: '#/components/schemas/AttributeDefinition',
+                $ref: '#/components/schemas/ProductAttributeLink',
               },
             },
             variants: {
@@ -434,6 +469,10 @@ const options = {
                 properties: {
                   sku: { type: 'string', example: 'GP-RED-001' },
                   price: { type: 'number', format: 'float', example: 1000 },
+                  salePrice: { type: 'number', format: 'float', example: 950 },
+                  comparePrice: { type: 'number', format: 'float', example: 1000 },
+                  image: { type: 'string', example: 'https://cdn.example.com/products/generic-red.jpg' },
+                  barcode: { type: 'string', example: '890000100001' },
                   stock: { type: 'integer', example: 10 },
                   status: { type: 'string', enum: ['active', 'inactive'] },
                   attributeValues: {
@@ -493,7 +532,32 @@ const options = {
             },
             variants: {
               type: 'array',
-              items: { type: 'object' },
+              items: {
+                type: 'object',
+                properties: {
+                  sku: { type: 'string' },
+                  price: { type: 'number', format: 'float' },
+                  salePrice: { type: 'number', format: 'float' },
+                  comparePrice: { type: 'number', format: 'float' },
+                  stock: { type: 'integer' },
+                  status: { type: 'string', enum: ['active', 'inactive'] },
+                  attributeValues: {
+                    type: 'array',
+                    items: {
+                      oneOf: [
+                        { type: 'string', example: 'color:black' },
+                        {
+                          type: 'object',
+                          properties: {
+                            code: { type: 'string' },
+                            value: { type: 'string' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
             },
             media: {
               type: 'array',
@@ -513,6 +577,66 @@ const options = {
                   },
                 },
               ],
+            },
+          },
+        },
+        VariantCombinationPreviewItem: {
+          type: 'object',
+          properties: {
+            key: { type: 'string', example: 'color:black|storage:256gb' },
+            label: { type: 'string', example: 'Black / 256GB' },
+            isExisting: { type: 'boolean', example: false },
+            selections: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductAttributeSelection',
+              },
+            },
+          },
+        },
+        VariantCombinationPreviewSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              example: true,
+            },
+            message: {
+              type: 'string',
+              example: 'Variant combinations generated successfully',
+            },
+            data: {
+              type: 'object',
+              properties: {
+                productId: { type: 'integer', example: 1 },
+                productType: { type: 'string', example: 'variant' },
+                totalPossible: { type: 'integer', example: 24 },
+                generatedCount: { type: 'integer', example: 24 },
+                returnedCount: { type: 'integer', example: 18 },
+                truncated: { type: 'boolean', example: false },
+                combinations: {
+                  type: 'array',
+                  items: {
+                    $ref: '#/components/schemas/VariantCombinationPreviewItem',
+                  },
+                },
+              },
+            },
+          },
+        },
+        VariantResolveSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              example: true,
+            },
+            message: {
+              type: 'string',
+              example: 'Variant resolved successfully',
+            },
+            data: {
+              $ref: '#/components/schemas/ProductVariant',
             },
           },
         },

@@ -9,6 +9,9 @@ const {
   updateProductSchema,
   getProductByIdSchema,
   listProductsSchema,
+  previewVariantCombinationsSchema,
+  saveProductVariantsSchema,
+  resolveVariantSchema,
 } = require('../validators/product.validator');
 
 const router = express.Router();
@@ -140,7 +143,8 @@ router.get('/search', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProduc
  *     summary: Create generalized product
  *     description: |
  *       Access: developer, super_admin, admin.
- *       Creates base product + optional categories + dynamic attributes + optional variants + media + metadata.
+ *       Creates base product + optional categories + dynamic attributes.
+ *       Variants can be sent directly, or staged using preview and save-variants endpoints.
  *       Required permission: product.create
  *     security:
  *       - bearerAuth: []
@@ -165,6 +169,195 @@ router.get('/search', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProduc
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', auth(), can(PERMISSIONS.PRODUCT_CREATE), validate(createProductSchema), controller.create);
+
+/**
+ * @swagger
+ * /products/{id}/variant-combinations/preview:
+ *   post:
+ *     tags: [Products, Variants]
+ *     summary: Preview generated variant combinations
+ *     description: |
+ *       Access: developer, super_admin, admin.
+ *       Generates all possible combinations from product variant-axis attributes without saving variants.
+ *       Required permission: product.update
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               maxCombinations:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5000
+ *                 default: 500
+ *               onlyMissing:
+ *                 type: boolean
+ *                 default: false
+ *     responses:
+ *       200:
+ *         description: Combination preview generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/VariantCombinationPreviewSuccessResponse'
+ */
+router.post(
+  '/:id/variant-combinations/preview',
+  auth(),
+  can(PERMISSIONS.PRODUCT_UPDATE),
+  validate(previewVariantCombinationsSchema),
+  controller.previewVariantCombinations
+);
+
+/**
+ * @swagger
+ * /products/{id}/variants:
+ *   post:
+ *     tags: [Products, Variants]
+ *     summary: Save selected sellable variants
+ *     description: |
+ *       Access: developer, super_admin, admin.
+ *       Persists only selected sellable variants for the product. This is the second step after preview.
+ *       Required permission: product.update
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [variants]
+ *             properties:
+ *               replaceExisting:
+ *                 type: boolean
+ *                 default: true
+ *               variants:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     sku:
+ *                       type: string
+ *                     price:
+ *                       type: number
+ *                       format: float
+ *                     salePrice:
+ *                       type: number
+ *                       format: float
+ *                     comparePrice:
+ *                       type: number
+ *                       format: float
+ *                     stock:
+ *                       type: integer
+ *                     attributeValues:
+ *                       type: array
+ *                       items:
+ *                         oneOf:
+ *                           - type: string
+ *                             example: color:black
+ *                           - type: object
+ *                             properties:
+ *                               code:
+ *                                 type: string
+ *                               value:
+ *                                 type: string
+ *               media:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                     mediaType:
+ *                       type: string
+ *                     variantSku:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: Variants persisted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductSuccessResponse'
+ */
+router.post(
+  '/:id/variants',
+  auth(),
+  can(PERMISSIONS.PRODUCT_UPDATE),
+  validate(saveProductVariantsSchema),
+  controller.saveVariants
+);
+
+/**
+ * @swagger
+ * /products/{id}/variant-resolve:
+ *   post:
+ *     tags: [Products, Variants]
+ *     summary: Resolve variant by selected attributes
+ *     description: |
+ *       Access: developer, super_admin, admin, customer.
+ *       Returns the exact active variant for selected attribute values.
+ *       Required permission: product.read
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [attributeValues]
+ *             properties:
+ *               attributeValues:
+ *                 type: array
+ *                 items:
+ *                   oneOf:
+ *                     - type: string
+ *                       example: color:black
+ *                     - type: object
+ *                       properties:
+ *                         code:
+ *                           type: string
+ *                         value:
+ *                           type: string
+ *     responses:
+ *       200:
+ *         description: Variant resolved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/VariantResolveSuccessResponse'
+ */
+router.post(
+  '/:id/variant-resolve',
+  auth(),
+  can(PERMISSIONS.PRODUCT_READ),
+  validate(resolveVariantSchema),
+  controller.resolveVariant
+);
 
 /**
  * @swagger

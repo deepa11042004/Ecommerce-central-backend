@@ -50,7 +50,9 @@ class ProductService {
         transaction,
       });
 
-      const variantIdBySku = await this.persistVariants(product.id, normalizedVariants, { transaction });
+      const variantIdBySku = normalizedVariants.length
+        ? await this.persistVariants(product.id, normalizedVariants, { transaction })
+        : new Map();
       await ProductRepository.replaceProductMedia(product.id, this.toMediaRows(product.id, payload.media || [], variantIdBySku), {
         transaction,
       });
@@ -200,6 +202,138 @@ class ProductService {
     });
   }
 
+  static async previewVariantCombinations(id, payload = {}) {
+    const product = await ProductRepository.findById(id);
+
+    if (!product) {
+      throw ApiError.notFound('Product not found');
+    }
+
+    const maxCombinations = Number.isFinite(Number(payload.maxCombinations))
+      ? Math.min(Math.max(Number(payload.maxCombinations), 1), 5000)
+      : 500;
+    const onlyMissing = Boolean(payload.onlyMissing);
+    const normalizedAttributes = this.toNormalizedAttributesFromProduct(product);
+    const axisAttributes = normalizedAttributes.filter((attribute) => attribute.isVariantAxis && attribute.values.length);
+
+    if (!axisAttributes.length) {
+      return {
+        productId: product.id,
+        productType: product.productType,
+        axes: [],
+        combinations: [],
+        totalPossible: 0,
+        generatedCount: 0,
+        returnedCount: 0,
+        truncated: false,
+      };
+    }
+
+    const { combinations, totalPossible, truncated } = this.generateCombinationPreview(axisAttributes, maxCombinations);
+    const existingVariantKeys = new Set(
+      (product.variants || [])
+        .map((variant) => this.buildCombinationKey(variant.attributeValues || []))
+        .filter(Boolean)
+    );
+
+    const enrichedCombinations = combinations.map((combination) => ({
+      ...combination,
+      isExisting: existingVariantKeys.has(combination.key),
+    }));
+
+    const finalCombinations = onlyMissing
+      ? enrichedCombinations.filter((combination) => !combination.isExisting)
+      : enrichedCombinations;
+
+    return {
+      productId: product.id,
+      productType: product.productType,
+      axes: axisAttributes.map((attribute) => ({
+        attributeId: attribute.attributeId,
+        attributeCode: attribute.attributeCode,
+        attributeName: attribute.attributeName,
+        values: attribute.values,
+      })),
+      combinations: finalCombinations,
+      totalPossible,
+      generatedCount: combinations.length,
+      returnedCount: finalCombinations.length,
+      truncated,
+    };
+  }
+
+  static async saveVariants(id, payload) {
+    return sequelize.transaction(async (transaction) => {
+      const product = await ProductRepository.findByIdBasic(id, { transaction });
+
+      if (!product) {
+        throw ApiError.notFound('Product not found');
+      }
+
+      const normalizedAttributes = await this.getExistingNormalizedAttributes(product.id, { transaction });
+
+      if (payload.replaceExisting !== false) {
+        await ProductRepository.deleteVariantsByProductId(product.id, { transaction });
+      }
+
+      const normalizedVariants = await this.normalizeVariants({
+        variants: payload.variants || [],
+        productType: product.productType,
+        skuPrefix: product.skuPrefix,
+        normalizedAttributes,
+        transaction,
+      });
+
+      const variantIdBySku = await this.persistVariants(product.id, normalizedVariants, { transaction });
+
+      if (payload.media) {
+        let variantMap = variantIdBySku;
+
+        if (!variantMap.size || payload.replaceExisting === false) {
+          const allVariants = await ProductRepository.findVariantsByProductId(product.id, { transaction });
+          variantMap = new Map(allVariants.map((variant) => [variant.sku, variant.id]));
+        }
+
+        await ProductRepository.replaceProductMedia(product.id, this.toMediaRows(product.id, payload.media, variantMap), {
+          transaction,
+        });
+      }
+
+      return ProductRepository.findById(product.id, { transaction });
+    });
+  }
+
+  static async resolveVariantByAttributes(id, payload) {
+    const product = await ProductRepository.findById(id);
+
+    if (!product) {
+      throw ApiError.notFound('Product not found');
+    }
+
+    const normalizedAttributes = this.toNormalizedAttributesFromProduct(product);
+    const valueIndex = this.buildAttributeValueIndex(normalizedAttributes);
+    const resolvedValues = this.resolveVariantAttributeValues(payload.attributeValues || [], valueIndex);
+
+    if (!resolvedValues.length) {
+      throw ApiError.badRequest('At least one attribute value is required');
+    }
+
+    const targetKey = this.buildCombinationKey(resolvedValues);
+    const matchedVariant = (product.variants || []).find((variant) => {
+      if (variant.status !== 'active') {
+        return false;
+      }
+
+      return this.buildCombinationKey(variant.attributeValues || []) === targetKey;
+    });
+
+    if (!matchedVariant) {
+      throw ApiError.notFound('No active variant found for selected attributes');
+    }
+
+    return matchedVariant;
+  }
+
   static async ensureBrandExists(brandId, { transaction } = {}) {
     if (!brandId) {
       return;
@@ -314,13 +448,17 @@ class ProductService {
   }
 
   static async normalizeVariants({ variants, productType, skuPrefix, normalizedAttributes, transaction }) {
+    if (!Array.isArray(variants) || variants.length === 0) {
+      return [];
+    }
+
     const resolvedType = productType || 'simple';
 
     if (resolvedType === 'simple' && variants.length !== 1) {
       throw ApiError.badRequest('Simple products must contain exactly one variant');
     }
 
-    if (resolvedType === 'variant' && variants.length < 1) {
+    if ((resolvedType === 'variant' || resolvedType === 'configurable') && variants.length < 1) {
       throw ApiError.badRequest('Variant products must contain at least one variant');
     }
 
@@ -345,6 +483,18 @@ class ProductService {
       localSkuSet.add(sku);
 
       const attributeValueLinks = this.resolveVariantAttributeValues(variant.attributeValues || [], valueIndex);
+      const hasSalePrice = Number.isFinite(Number(variant.salePrice));
+      const price = hasSalePrice ? Number(variant.salePrice) : Number(variant.price);
+
+      if (!Number.isFinite(price)) {
+        throw ApiError.badRequest(`Variant price is required for sku: ${sku}`);
+      }
+
+      const comparePrice = variant.comparePrice ?? (
+        hasSalePrice && Number.isFinite(Number(variant.price))
+          ? Number(variant.price)
+          : null
+      );
       const quantity = Number.isFinite(Number(variant.stock))
         ? Number(variant.stock)
         : Number.isFinite(Number(variant.inventory?.quantity))
@@ -354,8 +504,8 @@ class ProductService {
       normalizedVariants.push({
         sku,
         title: variant.title || null,
-        price: Number(variant.price),
-        comparePrice: variant.comparePrice ?? null,
+        price,
+        comparePrice,
         costPrice: variant.costPrice ?? null,
         status: variant.status || 'active',
         image: variant.image || null,
@@ -589,6 +739,81 @@ class ProductService {
     }));
   }
 
+  static generateCombinationPreview(axisAttributes, maxCombinations) {
+    const limit = Number.isFinite(Number(maxCombinations))
+      ? Math.min(Math.max(Number(maxCombinations), 1), 5000)
+      : 500;
+    const combinations = [];
+    const totalPossible = axisAttributes.reduce((acc, attribute) => acc * attribute.values.length, 1);
+    let truncated = false;
+
+    const walk = (index, selection) => {
+      if (combinations.length >= limit) {
+        truncated = true;
+        return;
+      }
+
+      if (index === axisAttributes.length) {
+        const snapshot = selection.map((entry) => ({ ...entry }));
+        combinations.push({
+          key: this.buildCombinationKey(snapshot),
+          label: this.buildCombinationLabel(snapshot),
+          selections: snapshot,
+        });
+        return;
+      }
+
+      const attribute = axisAttributes[index];
+
+      for (const value of attribute.values) {
+        selection.push({
+          attributeId: attribute.attributeId,
+          attributeCode: attribute.attributeCode,
+          attributeName: attribute.attributeName,
+          attributeValueId: value.id,
+          value: value.value,
+          valueSlug: value.valueSlug,
+        });
+
+        walk(index + 1, selection);
+        selection.pop();
+
+        if (truncated) {
+          break;
+        }
+      }
+    };
+
+    walk(0, []);
+
+    return {
+      combinations,
+      totalPossible,
+      truncated,
+    };
+  }
+
+  static buildCombinationLabel(selection) {
+    return selection.map((entry) => entry.value || entry.valueSlug).join(' / ');
+  }
+
+  static buildCombinationKey(selection) {
+    return selection
+      .map((entry) => {
+        const attributeCode = String(entry.attributeCode || entry.attribute?.code || '').trim().toLowerCase();
+        const valueSlug = String(entry.valueSlug || entry.attributeValue?.valueSlug || '').trim().toLowerCase();
+
+        if (!attributeCode || !valueSlug) {
+          return null;
+        }
+
+        return `${attributeCode}:${valueSlug}`;
+      })
+      .filter(Boolean)
+      .sort()
+      .join('|');
+  }
+
   static detectMetaType(value) {
     if (typeof value === 'number') {
       return 'number';
@@ -654,17 +879,24 @@ class ProductService {
       throw ApiError.notFound('Product not found');
     }
 
-    return (product.productAttributes || []).map((entry) => ({
-      attributeId: entry.attribute?.id,
-      attributeCode: entry.attribute?.code,
-      isRequired: entry.isRequired,
-      isVariantAxis: entry.isVariantAxis,
-      values: (entry.attribute?.values || []).map((value) => ({
-        id: value.id,
-        value: value.value,
-        valueSlug: value.valueSlug,
-      })),
-    }));
+    return this.toNormalizedAttributesFromProduct(product);
+  }
+
+  static toNormalizedAttributesFromProduct(product) {
+    return (product.productAttributes || [])
+      .map((entry) => ({
+        attributeId: entry.attribute?.id,
+        attributeCode: entry.attribute?.code,
+        attributeName: entry.attribute?.name,
+        isRequired: entry.isRequired,
+        isVariantAxis: entry.isVariantAxis,
+        values: (entry.attribute?.values || []).map((value) => ({
+          id: value.id,
+          value: value.value,
+          valueSlug: value.valueSlug,
+        })),
+      }))
+      .filter((entry) => entry.attributeId && entry.attributeCode);
   }
 
   static removeUndefined(payload) {

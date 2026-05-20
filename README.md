@@ -156,6 +156,9 @@ Auth:
 
 Products:
 - POST /products
+- POST /products/:id/variant-combinations/preview
+- POST /products/:id/variants
+- POST /products/:id/variant-resolve
 - GET /products
 - GET /products/search
 - GET /products/:id
@@ -190,15 +193,11 @@ Examples:
 
 ## Product Creation Flow
 
-POST /api/v1/products supports one payload for generalized creation:
-- base product
-- categories
-- attributes and attribute values
-- optional variants
-- optional media
-- optional metadata
+Stage 1: Create base product and dynamic attributes.
 
-Example payload:
+POST /api/v1/products
+
+Example payload (base + attributes, no persisted variants yet):
 
 ```json
 {
@@ -223,14 +222,6 @@ Example payload:
       "isRequired": true
     }
   ],
-  "variants": [
-    {
-      "sku": "GP-RED-128",
-      "price": 1000,
-      "stock": 10,
-      "attributeValues": ["color:red", "storage:128gb"]
-    }
-  ],
   "media": [
     {
       "url": "https://cdn.example.com/products/generic-main.jpg",
@@ -244,6 +235,51 @@ Example payload:
   }
 }
 ```
+
+Stage 2: Preview generated combinations (not persisted).
+
+POST /api/v1/products/:id/variant-combinations/preview
+
+```json
+{
+  "maxCombinations": 500,
+  "onlyMissing": true
+}
+```
+
+Stage 3: Save only selected sellable variants.
+
+POST /api/v1/products/:id/variants
+
+```json
+{
+  "replaceExisting": true,
+  "variants": [
+    {
+      "sku": "GP-RED-128",
+      "price": 1100,
+      "salePrice": 1000,
+      "stock": 10,
+      "attributeValues": ["color:red", "storage:128gb"]
+    }
+  ]
+}
+```
+
+Stage 4: Resolve exact variant for user attribute selection.
+
+POST /api/v1/products/:id/variant-resolve
+
+```json
+{
+  "attributeValues": ["color:red", "storage:128gb"]
+}
+```
+
+This keeps the system scalable:
+- combinations are generated in memory
+- only real sellable variants are persisted
+- variant SKU/price/stock stay inventory-accurate
 
 ## Category Tree Logic
 

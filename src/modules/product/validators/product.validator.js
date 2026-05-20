@@ -33,7 +33,8 @@ const variantAttributeValueSchema = Joi.alternatives().try(
 const variantSchema = Joi.object({
   sku: Joi.string().trim().min(2).max(80).optional(),
   title: Joi.string().trim().max(160).optional().allow(null, ''),
-  price: Joi.number().min(0).precision(2).required(),
+  price: Joi.number().min(0).precision(2).optional(),
+  salePrice: Joi.number().min(0).precision(2).optional().allow(null),
   comparePrice: Joi.number().min(0).precision(2).optional().allow(null),
   costPrice: Joi.number().min(0).precision(2).optional().allow(null),
   status: Joi.string().valid('active', 'inactive').default('active'),
@@ -48,7 +49,7 @@ const variantSchema = Joi.object({
     lowStockThreshold: Joi.number().integer().min(0).optional().allow(null),
     allowBackorder: Joi.boolean().optional(),
   }).optional(),
-});
+}).or('price', 'salePrice');
 
 const mediaSchema = Joi.object({
   url: Joi.string().uri().required(),
@@ -168,10 +169,46 @@ const categoryTreeSchema = Joi.object({
   }).optional(),
 });
 
+const previewVariantCombinationsSchema = Joi.object({
+  body: Joi.object({
+    maxCombinations: Joi.number().integer().min(1).max(5000).optional(),
+    onlyMissing: Joi.boolean().optional(),
+  }).optional(),
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }).required(),
+  query: Joi.object({}).optional(),
+});
+
+const saveProductVariantsSchema = Joi.object({
+  body: Joi.object({
+    replaceExisting: Joi.boolean().optional(),
+    variants: Joi.array().items(variantSchema).min(1).required(),
+    media: Joi.array().items(mediaSchema).optional(),
+  }).required(),
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }).required(),
+  query: Joi.object({}).optional(),
+});
+
+const resolveVariantSchema = Joi.object({
+  body: Joi.object({
+    attributeValues: Joi.array().items(variantAttributeValueSchema).min(1).required(),
+  }).required(),
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }).required(),
+  query: Joi.object({}).optional(),
+});
+
 module.exports = {
   createProductSchema,
   updateProductSchema,
   getProductByIdSchema,
   listProductsSchema,
   categoryTreeSchema,
+  previewVariantCombinationsSchema,
+  saveProductVariantsSchema,
+  resolveVariantSchema,
 };

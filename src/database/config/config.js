@@ -9,6 +9,7 @@ const baseConfig = {
   dialect: 'mysql',
   logging: process.env.DB_LOGGING === 'true',
   seederStorage: 'sequelize',
+  seederStorageTableName: 'sequelize_seed_meta',
   migrationStorageTableName: 'sequelize_meta',
   define: {
     underscored: true,
