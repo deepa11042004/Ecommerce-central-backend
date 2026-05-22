@@ -27,7 +27,7 @@ module.exports = {
     const developerEmail = process.env.SEED_DEVELOPER_EMAIL || DEFAULT_SEED_DEVELOPER_EMAIL;
     const developerPassword = process.env.SEED_DEVELOPER_PASSWORD || 'Dev!loper#2026';
     const superAdminEmail = process.env.SEED_SUPER_ADMIN_EMAIL || DEFAULT_SEED_SUPER_ADMIN_EMAIL;
-    const superAdminPassword = process.env.SEED_SUPER_ADMIN_PASSWORD || 'SuperAdmin!#2026X';
+    const superAdminPassword = process.env.SEED_SUPER_ADMIN_PASSWORD || 'SuperAdmin!#2026X9';
 
     const developerPasswordHash = await bcrypt.hash(developerPassword, saltRounds);
     const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, saltRounds);
