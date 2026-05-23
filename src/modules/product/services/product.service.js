@@ -15,18 +15,30 @@ const ALLOWED_SORT_FIELDS = ['price', 'stock', 'title', 'createdAt'];
 class ProductService {
   static async create(payload) {
     return sequelize.transaction(async (transaction) => {
-      await this.ensureBrandExists(payload.brandId, { transaction });
+      const hasVariants = this.resolveHasVariants(payload);
+      const productType = hasVariants ? 'variant' : 'simple';
+      const brandId = await this.resolveBrandId(payload, { transaction });
+
       await this.ensureCategoriesExist(payload.categoryIds || [], { transaction });
 
+      if (!hasVariants) {
+        this.ensureSimpleProductPayload(payload);
+      }
+
       const slug = await this.generateUniqueProductSlug(payload.slug || payload.title, null, { transaction });
-      const normalizedAttributes = await this.normalizeAttributes(payload.attributes || [], { transaction });
-      const normalizedVariants = await this.normalizeVariants({
-        variants: payload.variants || [],
-        productType: payload.productType,
-        skuPrefix: payload.skuPrefix,
-        normalizedAttributes,
-        transaction,
-      });
+      const normalizedAttributes = hasVariants
+        ? await this.normalizeAttributes(payload.attributes || [], { transaction })
+        : [];
+      const normalizedVariants = hasVariants
+        ? await this.normalizeVariants({
+            variants: payload.variants || [],
+            productType,
+            skuPrefix: payload.skuPrefix,
+            normalizedAttributes,
+            transaction,
+          })
+        : [];
+      const simpleSku = !hasVariants ? await this.resolveSimpleProductSku(payload.sku, slug, null, { transaction }) : null;
 
       const product = await ProductRepository.create(
         {
@@ -35,8 +47,13 @@ class ProductService {
           description: payload.description,
           shortDescription: payload.shortDescription,
           skuPrefix: payload.skuPrefix,
-          brandId: payload.brandId,
-          productType: payload.productType || 'simple',
+          brandId,
+          productType,
+          hasVariants,
+          basePrice: hasVariants ? null : Number(payload.basePrice),
+          comparePrice: hasVariants ? null : (payload.comparePrice ?? null),
+          stock: hasVariants ? null : Number(payload.quantity),
+          sku: simpleSku,
           status: payload.status || 'active',
           thumbnail: payload.thumbnail,
           seoTitle: payload.seoTitle,
@@ -72,6 +89,7 @@ class ProductService {
       search: query.search,
       status: query.status,
       productType: query.productType,
+      hasVariants: this.parseBooleanQuery(query.hasVariants),
       category: query.category,
       brand: query.brand,
       productIds,
@@ -95,6 +113,26 @@ class ProductService {
     return this.list(query);
   }
 
+  static parseBooleanQuery(value) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+
+      if (normalized === 'true') {
+        return true;
+      }
+
+      if (normalized === 'false') {
+        return false;
+      }
+    }
+
+    return undefined;
+  }
+
   static async getById(id) {
     const product = await ProductRepository.findById(id);
 
@@ -113,15 +151,35 @@ class ProductService {
         throw ApiError.notFound('Product not found');
       }
 
-      await this.ensureBrandExists(payload.brandId, { transaction });
+      const nextHasVariants = this.resolveHasVariants({
+        hasVariants: payload.hasVariants,
+        productType: payload.productType,
+      }, product.hasVariants);
+      const nextProductType = nextHasVariants ? 'variant' : 'simple';
+      const nextBrandId = await this.resolveBrandId(payload, { transaction, fallbackBrandId: product.brandId });
+
+      if (!nextHasVariants) {
+        this.ensureSimpleProductPayload(
+          {
+            basePrice: payload.basePrice ?? product.basePrice,
+            comparePrice: payload.comparePrice ?? product.comparePrice,
+            quantity: payload.quantity ?? product.stock,
+          },
+          { allowNullableComparePrice: true }
+        );
+      }
 
       const nextPayload = {
         title: payload.title,
         description: payload.description,
         shortDescription: payload.shortDescription,
         skuPrefix: payload.skuPrefix,
-        brandId: payload.brandId,
-        productType: payload.productType,
+        brandId: nextBrandId,
+        productType: nextProductType,
+        hasVariants: nextHasVariants,
+        basePrice: nextHasVariants ? null : (payload.basePrice ?? product.basePrice),
+        comparePrice: nextHasVariants ? null : (payload.comparePrice ?? product.comparePrice ?? null),
+        stock: nextHasVariants ? null : (payload.quantity ?? product.stock),
         status: payload.status,
         thumbnail: payload.thumbnail,
         seoTitle: payload.seoTitle,
@@ -134,6 +192,16 @@ class ProductService {
         nextPayload.slug = await this.generateUniqueProductSlug(payload.title, product.id, { transaction });
       }
 
+      if (!nextHasVariants && (payload.sku || product.sku || payload.title)) {
+        const slugSeed = nextPayload.slug || product.slug;
+        nextPayload.sku = await this.resolveSimpleProductSku(
+          payload.sku || product.sku,
+          slugSeed,
+          product.id,
+          { transaction }
+        );
+      }
+
       await ProductRepository.update(product, this.removeUndefined(nextPayload), { transaction });
 
       if (payload.categoryIds) {
@@ -144,6 +212,10 @@ class ProductService {
       let normalizedAttributes = null;
 
       if (payload.attributes) {
+        if (!nextHasVariants) {
+          throw ApiError.badRequest('Simple products cannot define variant attributes');
+        }
+
         normalizedAttributes = await this.normalizeAttributes(payload.attributes, { transaction });
         await ProductRepository.replaceProductAttributes(
           product.id,
@@ -155,6 +227,10 @@ class ProductService {
       let variantIdBySku = null;
 
       if (payload.variants) {
+        if (!nextHasVariants) {
+          throw ApiError.badRequest('Simple products cannot contain variants');
+        }
+
         const attributesForVariants = normalizedAttributes || await this.getExistingNormalizedAttributes(product.id, { transaction });
 
         await ProductRepository.deleteVariantsByProductId(product.id, { transaction });
@@ -200,6 +276,35 @@ class ProductService {
 
       await ProductRepository.delete(product, { transaction });
     });
+  }
+
+  static async generateVariantsFromAttributes(payload = {}) {
+    const axisAttributes = this.normalizePreviewAttributes(payload.attributes || []);
+
+    if (!axisAttributes.length) {
+      throw ApiError.badRequest('At least one attribute with values is required to generate variants');
+    }
+
+    const maxCombinations = Number.isFinite(Number(payload.maxCombinations))
+      ? Math.min(Math.max(Number(payload.maxCombinations), 1), 5000)
+      : 500;
+    const { combinations, totalPossible, truncated } = this.generateCombinationPreview(axisAttributes, maxCombinations);
+
+    return {
+      productId: null,
+      productType: 'variant',
+      axes: axisAttributes.map((attribute) => ({
+        attributeId: null,
+        attributeCode: attribute.attributeCode,
+        attributeName: attribute.attributeName,
+        values: attribute.values,
+      })),
+      combinations,
+      totalPossible,
+      generatedCount: combinations.length,
+      returnedCount: combinations.length,
+      truncated,
+    };
   }
 
   static async previewVariantCombinations(id, payload = {}) {
@@ -270,6 +375,10 @@ class ProductService {
         throw ApiError.notFound('Product not found');
       }
 
+      if (!product.hasVariants) {
+        throw ApiError.badRequest('Variant operations are disabled for this simple product');
+      }
+
       const normalizedAttributes = await this.getExistingNormalizedAttributes(product.id, { transaction });
 
       if (payload.replaceExisting !== false) {
@@ -332,6 +441,131 @@ class ProductService {
     }
 
     return matchedVariant;
+  }
+
+  static resolveHasVariants(payload, fallbackHasVariants = false) {
+    if (typeof payload.hasVariants === 'boolean') {
+      return payload.hasVariants;
+    }
+
+    if (typeof payload.productType === 'string') {
+      return payload.productType.toLowerCase() !== 'simple';
+    }
+
+    return Boolean(fallbackHasVariants);
+  }
+
+  static ensureSimpleProductPayload(payload, { allowNullableComparePrice = false } = {}) {
+    const basePrice = Number(payload.basePrice);
+    const quantity = Number(payload.quantity);
+
+    if (!Number.isFinite(basePrice) || basePrice < 0) {
+      throw ApiError.badRequest('Simple products require a valid basePrice');
+    }
+
+    if (!Number.isInteger(quantity) || quantity < 0) {
+      throw ApiError.badRequest('Simple products require a valid quantity');
+    }
+
+    if (!allowNullableComparePrice && typeof payload.comparePrice === 'undefined') {
+      throw ApiError.badRequest('Simple products require comparePrice (can be null)');
+    }
+  }
+
+  static async resolveSimpleProductSku(rawSku, slugSeed, excludeId, { transaction } = {}) {
+    const candidate = String(rawSku || `${slugSeed}-simple`).trim().toUpperCase();
+
+    if (!candidate) {
+      throw ApiError.badRequest('SKU generation failed for simple product');
+    }
+
+    let sku = candidate;
+    let counter = 1;
+
+    while (await ProductRepository.findOneByProductSku(sku, excludeId, { transaction })) {
+      sku = `${candidate}-${counter}`;
+      counter += 1;
+    }
+
+    return sku;
+  }
+
+  static async resolveBrandId(payload, { transaction, fallbackBrandId = null } = {}) {
+    if (payload.brandId) {
+      const brand = await ProductRepository.findBrandById(payload.brandId, { transaction });
+
+      if (!brand) {
+        throw ApiError.badRequest('Brand not found');
+      }
+
+      return brand.id;
+    }
+
+    if (payload.brandName) {
+      const name = String(payload.brandName).trim();
+
+      if (!name) {
+        throw ApiError.badRequest('brandName cannot be empty');
+      }
+
+      const slug = generateSlug(name, 'brand');
+      const existingBrand = await ProductRepository.findBrandBySlug(slug, { transaction })
+        || await ProductRepository.findBrandByName(name, { transaction });
+
+      if (existingBrand) {
+        return existingBrand.id;
+      }
+
+      const createdBrand = await ProductRepository.createBrand(
+        {
+          name,
+          slug,
+          status: 'active',
+        },
+        { transaction }
+      );
+
+      return createdBrand.id;
+    }
+
+    return fallbackBrandId;
+  }
+
+  static normalizePreviewAttributes(attributes) {
+    return attributes
+      .map((attribute) => {
+        const attributeName = String(attribute.name || '').trim();
+        const attributeCode = generateSlug(attribute.code || attributeName, 'attribute');
+
+        const values = (attribute.values || [])
+          .map((entry) => {
+            const valueLabel = typeof entry === 'string' ? entry : entry.value;
+            const cleanValue = String(valueLabel || '').trim();
+
+            if (!cleanValue) {
+              return null;
+            }
+
+            return {
+              id: null,
+              value: cleanValue,
+              valueSlug: generateSlug(typeof entry === 'string' ? cleanValue : entry.slug || cleanValue, 'value'),
+            };
+          })
+          .filter(Boolean);
+
+        if (!attributeName || !attributeCode || !values.length) {
+          return null;
+        }
+
+        return {
+          attributeId: null,
+          attributeCode,
+          attributeName,
+          values,
+        };
+      })
+      .filter(Boolean);
   }
 
   static async ensureBrandExists(brandId, { transaction } = {}) {

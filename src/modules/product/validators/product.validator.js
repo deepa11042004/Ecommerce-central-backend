@@ -90,17 +90,43 @@ const createProductSchema = Joi.object({
     shortDescription: Joi.string().max(500).optional().allow(null, ''),
     skuPrefix: Joi.string().max(80).optional().allow(null, ''),
     brandId: Joi.number().integer().positive().optional().allow(null),
+    brandName: Joi.string().trim().min(1).max(120).optional(),
     productType: Joi.string().valid('simple', 'configurable', 'variant').default('simple'),
+    hasVariants: Joi.boolean().default(false),
+    sku: Joi.string().trim().min(2).max(80).optional(),
+    basePrice: Joi.number().min(0).precision(2).when('hasVariants', {
+      is: false,
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(null),
+    }),
+    comparePrice: Joi.number().min(0).precision(2).when('hasVariants', {
+      is: false,
+      then: Joi.required().allow(null),
+      otherwise: Joi.optional().allow(null),
+    }),
+    quantity: Joi.number().integer().min(0).when('hasVariants', {
+      is: false,
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(null),
+    }),
     status: Joi.string().valid('active', 'inactive').default('active'),
     thumbnail: Joi.string().uri().allow(null, '').optional(),
     seoTitle: Joi.string().max(255).allow(null, '').optional(),
     seoDescription: Joi.string().max(500).allow(null, '').optional(),
     categoryIds: Joi.array().items(Joi.number().integer().positive()).unique().optional().default([]),
-    attributes: Joi.array().items(attributeSchema).optional().default([]),
-    variants: Joi.array().items(variantSchema).optional().default([]),
+    attributes: Joi.array().items(attributeSchema).when('hasVariants', {
+      is: true,
+      then: Joi.optional().default([]),
+      otherwise: Joi.forbidden(),
+    }),
+    variants: Joi.array().items(variantSchema).when('hasVariants', {
+      is: true,
+      then: Joi.optional().default([]),
+      otherwise: Joi.forbidden(),
+    }),
     media: Joi.array().items(mediaSchema).optional().default([]),
     meta: Joi.alternatives().try(metaObjectSchema, metaArraySchema).optional(),
-  }).required(),
+  }).oxor('brandId', 'brandName').required(),
   params: Joi.object({}).optional(),
   query: Joi.object({}).optional(),
 });
@@ -113,7 +139,13 @@ const updateProductSchema = Joi.object({
     shortDescription: Joi.string().max(500).optional().allow(null, ''),
     skuPrefix: Joi.string().max(80).optional().allow(null, ''),
     brandId: Joi.number().integer().positive().optional().allow(null),
+    brandName: Joi.string().trim().min(1).max(120).optional(),
     productType: Joi.string().valid('simple', 'configurable', 'variant').optional(),
+    hasVariants: Joi.boolean().optional(),
+    sku: Joi.string().trim().min(2).max(80).optional(),
+    basePrice: Joi.number().min(0).precision(2).optional().allow(null),
+    comparePrice: Joi.number().min(0).precision(2).optional().allow(null),
+    quantity: Joi.number().integer().min(0).optional().allow(null),
     status: Joi.string().valid('active', 'inactive').optional(),
     thumbnail: Joi.string().uri().allow(null, '').optional(),
     seoTitle: Joi.string().max(255).allow(null, '').optional(),
@@ -149,6 +181,7 @@ const listProductsSchema = Joi.object({
     search: Joi.string().allow('').optional(),
     status: Joi.string().valid('active', 'inactive').optional(),
     productType: Joi.string().valid('simple', 'configurable', 'variant').optional(),
+    hasVariants: Joi.boolean().optional(),
     category: Joi.string().trim().min(1).max(160).optional(),
     brand: Joi.number().integer().positive().optional(),
     attribute: Joi.alternatives().try(
@@ -180,6 +213,24 @@ const previewVariantCombinationsSchema = Joi.object({
   query: Joi.object({}).optional(),
 });
 
+const generateVariantsSchema = Joi.object({
+  body: Joi.object({
+    attributes: Joi.array()
+      .items(
+        Joi.object({
+          name: Joi.string().trim().min(1).max(120).required(),
+          code: Joi.string().trim().min(1).max(140).optional(),
+          values: Joi.array().items(attributeValueSchema).min(1).required(),
+        })
+      )
+      .min(1)
+      .required(),
+    maxCombinations: Joi.number().integer().min(1).max(5000).optional(),
+  }).required(),
+  params: Joi.object({}).optional(),
+  query: Joi.object({}).optional(),
+});
+
 const saveProductVariantsSchema = Joi.object({
   body: Joi.object({
     replaceExisting: Joi.boolean().optional(),
@@ -208,6 +259,7 @@ module.exports = {
   getProductByIdSchema,
   listProductsSchema,
   categoryTreeSchema,
+  generateVariantsSchema,
   previewVariantCombinationsSchema,
   saveProductVariantsSchema,
   resolveVariantSchema,

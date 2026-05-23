@@ -48,6 +48,16 @@ class ProductRepository {
     return Product.findOne({ where, transaction });
   }
 
+  static findOneByProductSku(sku, excludeId = null, { transaction } = {}) {
+    const where = { sku };
+
+    if (excludeId) {
+      where.id = { [Op.ne]: excludeId };
+    }
+
+    return Product.findOne({ where, transaction });
+  }
+
   static findOneByVariantSku(sku, excludeVariantId = null, { transaction } = {}) {
     const where = { sku };
 
@@ -60,6 +70,18 @@ class ProductRepository {
 
   static findBrandById(id, { transaction } = {}) {
     return Brand.findByPk(id, { transaction });
+  }
+
+  static findBrandBySlug(slug, { transaction } = {}) {
+    return Brand.findOne({ where: { slug }, transaction });
+  }
+
+  static findBrandByName(name, { transaction } = {}) {
+    return Brand.findOne({ where: { name }, transaction });
+  }
+
+  static createBrand(payload, { transaction } = {}) {
+    return Brand.create(payload, { transaction });
   }
 
   static findCategoriesByIds(ids, { transaction } = {}) {
@@ -274,6 +296,7 @@ class ProductRepository {
     search,
     status,
     productType,
+    hasVariants,
     category,
     brand,
     productIds,
@@ -290,6 +313,10 @@ class ProductRepository {
 
     if (productType) {
       where.productType = productType;
+    }
+
+    if (typeof hasVariants === 'boolean') {
+      where.hasVariants = hasVariants;
     }
 
     if (brand) {
@@ -344,15 +371,24 @@ class ProductRepository {
       attributes: {
         include: [
           [
-            literal('(SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = Product.id)'),
+            literal(`(
+              COALESCE(
+                (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = Product.id),
+                Product.base_price
+              )
+            )`),
             'minPrice',
           ],
           [
             literal(`(
-              SELECT COALESCE(SUM(inv.quantity), 0)
-              FROM product_variants pv2
-              LEFT JOIN inventory inv ON inv.variant_id = pv2.id
-              WHERE pv2.product_id = Product.id
+              COALESCE(
+                (SELECT SUM(inv.quantity)
+                FROM product_variants pv2
+                LEFT JOIN inventory inv ON inv.variant_id = pv2.id
+                WHERE pv2.product_id = Product.id),
+                Product.stock,
+                0
+              )
             )`),
             'totalStock',
           ],
@@ -365,7 +401,13 @@ class ProductRepository {
     if (sortBy === 'price') {
       return [
         [
-          literal('(SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = Product.id)'),
+          literal(`(
+            COALESCE(
+              (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = Product.id),
+              Product.base_price,
+              0
+            )
+          )`),
           sortOrder,
         ],
       ];
@@ -375,10 +417,14 @@ class ProductRepository {
       return [
         [
           literal(`(
-            SELECT COALESCE(SUM(inv.quantity), 0)
-            FROM product_variants pv2
-            LEFT JOIN inventory inv ON inv.variant_id = pv2.id
-            WHERE pv2.product_id = Product.id
+            COALESCE(
+              (SELECT SUM(inv.quantity)
+              FROM product_variants pv2
+              LEFT JOIN inventory inv ON inv.variant_id = pv2.id
+              WHERE pv2.product_id = Product.id),
+              Product.stock,
+              0
+            )
           )`),
           sortOrder,
         ],

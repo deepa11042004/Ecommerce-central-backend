@@ -41,6 +41,31 @@ const defineProductModel = (sequelize, DataTypes) => {
         defaultValue: 'simple',
         field: 'product_type',
       },
+      hasVariants: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'has_variants',
+      },
+      basePrice: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+        field: 'base_price',
+      },
+      comparePrice: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+        field: 'compare_price',
+      },
+      stock: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
+      },
+      sku: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+        unique: true,
+      },
       status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false,
@@ -80,6 +105,15 @@ const defineProductModel = (sequelize, DataTypes) => {
         },
         {
           fields: ['product_type'],
+        },
+        {
+          fields: ['has_variants'],
+        },
+        {
+          fields: ['base_price'],
+        },
+        {
+          fields: ['stock'],
         },
       ],
     }

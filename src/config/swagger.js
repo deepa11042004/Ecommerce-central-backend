@@ -365,7 +365,12 @@ const options = {
             description: { type: 'string' },
             shortDescription: { type: 'string', nullable: true },
             skuPrefix: { type: 'string', nullable: true, example: 'WH' },
+            sku: { type: 'string', nullable: true, example: 'RICE-PACKET-SIMPLE' },
             productType: { type: 'string', enum: ['simple', 'configurable', 'variant'], example: 'variant' },
+            hasVariants: { type: 'boolean', example: true },
+            basePrice: { type: 'number', format: 'float', nullable: true, example: 49.99 },
+            comparePrice: { type: 'number', format: 'float', nullable: true, example: 59.99 },
+            stock: { type: 'integer', nullable: true, example: 120 },
             status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
             thumbnail: { type: 'string', nullable: true },
             seoTitle: { type: 'string', nullable: true },
@@ -415,15 +420,21 @@ const options = {
         },
         ProductCreateRequest: {
           type: 'object',
-          required: ['title', 'description', 'productType'],
+          required: ['title', 'description', 'shortDescription', 'status', 'seoTitle', 'seoDescription', 'hasVariants'],
           properties: {
-            title: { type: 'string', example: 'Generic Product' },
-            slug: { type: 'string', example: 'generic-product' },
-            description: { type: 'string', example: 'Generalized product body.' },
-            shortDescription: { type: 'string', example: 'Short preview' },
-            skuPrefix: { type: 'string', example: 'GP' },
+            title: { type: 'string', example: 'Packet of Rice' },
+            slug: { type: 'string', example: 'packet-of-rice' },
+            description: { type: 'string', example: '1kg rice packet for daily use.' },
+            shortDescription: { type: 'string', example: '1kg rice packet' },
+            skuPrefix: { type: 'string', example: 'RICE' },
             brandId: { type: 'integer', nullable: true, example: 1 },
-            productType: { type: 'string', enum: ['simple', 'configurable', 'variant'], example: 'variant' },
+            brandName: { type: 'string', nullable: true, example: 'Acme Foods' },
+            productType: { type: 'string', enum: ['simple', 'configurable', 'variant'], default: 'simple' },
+            hasVariants: { type: 'boolean', default: false },
+            sku: { type: 'string', example: 'RICE-PACKET-1KG' },
+            basePrice: { type: 'number', format: 'float', example: 8.5 },
+            comparePrice: { type: 'number', format: 'float', nullable: true, example: 10 },
+            quantity: { type: 'integer', example: 200 },
             status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
             thumbnail: { type: 'string', example: 'https://cdn.example.com/products/generic.jpg' },
             seoTitle: { type: 'string', example: 'SEO title' },
@@ -435,6 +446,7 @@ const options = {
             },
             attributes: {
               type: 'array',
+              description: 'Use when hasVariants=true',
               items: {
                 type: 'object',
                 properties: {
@@ -464,6 +476,7 @@ const options = {
             },
             variants: {
               type: 'array',
+              description: 'Optional during create. Save selected combinations here or via POST /products/{id}/variants',
               items: {
                 type: 'object',
                 properties: {
@@ -521,6 +534,13 @@ const options = {
             title: { type: 'string' },
             description: { type: 'string' },
             shortDescription: { type: 'string' },
+            brandId: { type: 'integer', nullable: true },
+            brandName: { type: 'string', nullable: true },
+            hasVariants: { type: 'boolean' },
+            sku: { type: 'string' },
+            basePrice: { type: 'number', format: 'float', nullable: true },
+            comparePrice: { type: 'number', format: 'float', nullable: true },
+            quantity: { type: 'integer', nullable: true },
             status: { type: 'string', enum: ['active', 'inactive'] },
             categoryIds: {
               type: 'array',

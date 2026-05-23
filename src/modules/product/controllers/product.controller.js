@@ -27,6 +27,16 @@ const create = asyncHandler(async (req, res) => {
   });
 });
 
+const generateVariants = asyncHandler(async (req, res) => {
+  const preview = await ProductService.generateVariantsFromAttributes(req.body || {});
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Variant combinations generated successfully',
+    data: preview,
+  });
+});
+
 const previewVariantCombinations = asyncHandler(async (req, res) => {
   const preview = await ProductService.previewVariantCombinations(req.params.id, req.body || {});
 
@@ -110,6 +120,7 @@ const remove = asyncHandler(async (req, res) => {
 module.exports = {
   uploadImage,
   create,
+  generateVariants,
   previewVariantCombinations,
   saveVariants,
   resolveVariant,

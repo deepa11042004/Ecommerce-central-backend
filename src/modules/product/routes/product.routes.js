@@ -10,6 +10,7 @@ const {
   updateProductSchema,
   getProductByIdSchema,
   listProductsSchema,
+  generateVariantsSchema,
   previewVariantCombinationsSchema,
   saveProductVariantsSchema,
   resolveVariantSchema,
@@ -172,6 +173,68 @@ router.get('/search', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProduc
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', auth(), can(PERMISSIONS.PRODUCT_CREATE), validate(createProductSchema), controller.create);
+
+/**
+ * @swagger
+ * /products/generate-variants:
+ *   post:
+ *     tags: [Products, Variants]
+ *     summary: Generate variant combinations from attributes (preview only)
+ *     description: |
+ *       Access: developer, super_admin, admin.
+ *       Generates all possible combinations from dynamic attributes without persisting variants.
+ *       Required permission: product.create
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [attributes]
+ *             properties:
+ *               attributes:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [name, values]
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     code:
+ *                       type: string
+ *                     values:
+ *                       type: array
+ *                       items:
+ *                         oneOf:
+ *                           - type: string
+ *                           - type: object
+ *                             properties:
+ *                               value:
+ *                                 type: string
+ *                               slug:
+ *                                 type: string
+ *               maxCombinations:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5000
+ *                 default: 500
+ *     responses:
+ *       200:
+ *         description: Combination preview generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/VariantCombinationPreviewSuccessResponse'
+ */
+router.post(
+  '/generate-variants',
+  auth(),
+  can(PERMISSIONS.PRODUCT_CREATE),
+  validate(generateVariantsSchema),
+  controller.generateVariants
+);
 
 /**
  * @swagger
