@@ -114,6 +114,7 @@ const createProductSchema = Joi.object({
     seoTitle: Joi.string().max(255).allow(null, '').optional(),
     seoDescription: Joi.string().max(500).allow(null, '').optional(),
     categoryIds: Joi.array().items(Joi.number().integer().positive()).unique().optional().default([]),
+    categoryNames: Joi.array().items(Joi.string().trim().min(1).max(140)).unique().optional().default([]),
     attributes: Joi.array().items(attributeSchema).when('hasVariants', {
       is: true,
       then: Joi.optional().default([]),
@@ -151,6 +152,7 @@ const updateProductSchema = Joi.object({
     seoTitle: Joi.string().max(255).allow(null, '').optional(),
     seoDescription: Joi.string().max(500).allow(null, '').optional(),
     categoryIds: Joi.array().items(Joi.number().integer().positive()).unique().optional(),
+    categoryNames: Joi.array().items(Joi.string().trim().min(1).max(140)).unique().optional(),
     attributes: Joi.array().items(attributeSchema).optional(),
     variants: Joi.array().items(variantSchema).optional(),
     media: Joi.array().items(mediaSchema).optional(),
@@ -199,6 +201,16 @@ const categoryTreeSchema = Joi.object({
   params: Joi.object({}).optional(),
   query: Joi.object({
     status: Joi.string().valid('active', 'inactive').optional(),
+  }).optional(),
+});
+
+const listBrandsSchema = Joi.object({
+  body: Joi.object({}).optional(),
+  params: Joi.object({}).optional(),
+  query: Joi.object({
+    search: Joi.string().trim().allow('').max(120).optional(),
+    status: Joi.string().valid('active', 'inactive').optional(),
+    limit: Joi.number().integer().min(1).max(50).optional(),
   }).optional(),
 });
 
@@ -259,6 +271,7 @@ module.exports = {
   getProductByIdSchema,
   listProductsSchema,
   categoryTreeSchema,
+  listBrandsSchema,
   generateVariantsSchema,
   previewVariantCombinationsSchema,
   saveProductVariantsSchema,

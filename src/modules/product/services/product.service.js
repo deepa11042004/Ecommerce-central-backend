@@ -18,8 +18,7 @@ class ProductService {
       const hasVariants = this.resolveHasVariants(payload);
       const productType = hasVariants ? 'variant' : 'simple';
       const brandId = await this.resolveBrandId(payload, { transaction });
-
-      await this.ensureCategoriesExist(payload.categoryIds || [], { transaction });
+      const categoryIds = await this.resolveCategoryIds(payload, { transaction, fallbackCategoryIds: [] });
 
       if (!hasVariants) {
         this.ensureSimpleProductPayload(payload);
@@ -62,7 +61,7 @@ class ProductService {
         { transaction }
       );
 
-      await ProductRepository.replaceProductCategories(product.id, payload.categoryIds || [], { transaction });
+      await ProductRepository.replaceProductCategories(product.id, categoryIds, { transaction });
       await ProductRepository.replaceProductAttributes(product.id, this.toProductAttributeRows(product.id, normalizedAttributes), {
         transaction,
       });
@@ -204,9 +203,12 @@ class ProductService {
 
       await ProductRepository.update(product, this.removeUndefined(nextPayload), { transaction });
 
-      if (payload.categoryIds) {
-        await this.ensureCategoriesExist(payload.categoryIds, { transaction });
-        await ProductRepository.replaceProductCategories(product.id, payload.categoryIds, { transaction });
+      const hasCategoryUpdate = Object.prototype.hasOwnProperty.call(payload, 'categoryIds')
+        || Object.prototype.hasOwnProperty.call(payload, 'categoryNames');
+
+      if (hasCategoryUpdate) {
+        const categoryIds = await this.resolveCategoryIds(payload, { transaction, fallbackCategoryIds: [] });
+        await ProductRepository.replaceProductCategories(product.id, categoryIds, { transaction });
       }
 
       let normalizedAttributes = null;
@@ -590,6 +592,57 @@ class ProductService {
     if (categories.length !== categoryIds.length) {
       throw ApiError.badRequest('One or more categories do not exist');
     }
+  }
+
+  static async resolveCategoryIds(payload, { transaction, fallbackCategoryIds = null } = {}) {
+    const hasCategoryIds = Array.isArray(payload.categoryIds);
+    const hasCategoryNames = Array.isArray(payload.categoryNames);
+
+    if (!hasCategoryIds && !hasCategoryNames) {
+      return fallbackCategoryIds;
+    }
+
+    const resolvedIds = new Set(hasCategoryIds ? payload.categoryIds : []);
+
+    await this.ensureCategoriesExist(Array.from(resolvedIds), { transaction });
+
+    const normalizedNames = (hasCategoryNames ? payload.categoryNames : [])
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean);
+
+    const seenNameKeys = new Set();
+
+    for (const name of normalizedNames) {
+      const key = name.toLowerCase();
+
+      if (seenNameKeys.has(key)) {
+        continue;
+      }
+
+      seenNameKeys.add(key);
+
+      const slug = generateSlug(name, 'category');
+      const existingCategory = await ProductRepository.findCategoryBySlug(slug, { transaction })
+        || await ProductRepository.findCategoryByName(name, { transaction });
+
+      if (existingCategory) {
+        resolvedIds.add(existingCategory.id);
+        continue;
+      }
+
+      const createdCategory = await ProductRepository.createCategory(
+        {
+          name,
+          slug,
+          status: 'active',
+        },
+        { transaction }
+      );
+
+      resolvedIds.add(createdCategory.id);
+    }
+
+    return Array.from(resolvedIds);
   }
 
   static async normalizeAttributes(attributes, { transaction } = {}) {

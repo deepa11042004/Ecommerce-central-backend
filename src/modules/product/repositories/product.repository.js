@@ -80,6 +80,27 @@ class ProductRepository {
     return Brand.findOne({ where: { name }, transaction });
   }
 
+  static listBrands({ status = 'active', search = '', limit = 20 } = {}) {
+    const where = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      where.name = {
+        [Op.like]: `%${search}%`,
+      };
+    }
+
+    return Brand.findAll({
+      where,
+      attributes: ['id', 'name', 'slug'],
+      order: [['name', 'ASC']],
+      limit,
+    });
+  }
+
   static createBrand(payload, { transaction } = {}) {
     return Brand.create(payload, { transaction });
   }
@@ -97,6 +118,14 @@ class ProductRepository {
 
   static findCategoryBySlug(slug, { transaction } = {}) {
     return Category.findOne({ where: { slug }, transaction });
+  }
+
+  static findCategoryByName(name, { transaction } = {}) {
+    return Category.findOne({ where: { name }, transaction });
+  }
+
+  static createCategory(payload, { transaction } = {}) {
+    return Category.create(payload, { transaction });
   }
 
   static listCategories({ status = null } = {}) {
