@@ -43,6 +43,14 @@ const options = {
         description: 'Authentication endpoints',
       },
       {
+        name: 'Cart',
+        description: 'Guest-aware and authenticated customer cart endpoints with transactional merge support',
+      },
+      {
+        name: 'Wishlist',
+        description: 'Guest-aware and authenticated customer wishlist endpoints with merge-on-login support',
+      },
+      {
         name: 'Products',
         description: 'Generalized product management endpoints with dynamic attributes and variants',
       },
@@ -65,6 +73,18 @@ const options = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
+        },
+      },
+      parameters: {
+        GuestIdentityHeader: {
+          in: 'header',
+          name: 'x-guest-id',
+          required: false,
+          schema: {
+            type: 'string',
+          },
+          description:
+            'Optional guest identity header. Browser clients can rely on the guestId cookie set by the backend instead.',
         },
       },
       schemas: {
@@ -205,7 +225,296 @@ const options = {
                 refreshToken: {
                   type: 'string',
                 },
+                merge: {
+                  nullable: true,
+                  allOf: [{ $ref: '#/components/schemas/AuthMergeSummary' }],
+                },
               },
+            },
+          },
+        },
+        ShopperIdentity: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['user', 'guest'],
+              example: 'guest',
+            },
+            userId: {
+              type: 'integer',
+              nullable: true,
+              example: 18,
+            },
+            guestId: {
+              type: 'string',
+              nullable: true,
+              example: 'guest_2f84af93-5a46-4b9b-8b0a-891b8b3d4a44',
+            },
+          },
+        },
+        CartItemRequest: {
+          type: 'object',
+          required: ['productId', 'quantity'],
+          properties: {
+            productId: {
+              type: 'integer',
+              example: 1,
+            },
+            variantId: {
+              type: 'integer',
+              nullable: true,
+              example: 10,
+            },
+            quantity: {
+              type: 'integer',
+              minimum: 1,
+              example: 2,
+            },
+          },
+        },
+        WishlistItemRequest: {
+          type: 'object',
+          required: ['productId'],
+          properties: {
+            productId: {
+              type: 'integer',
+              example: 1,
+            },
+            variantId: {
+              type: 'integer',
+              nullable: true,
+              example: 10,
+            },
+          },
+        },
+        ShopperProductSummary: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            title: { type: 'string', example: 'Wireless Headphones' },
+            slug: { type: 'string', example: 'wireless-headphones' },
+            thumbnail: { type: 'string', nullable: true, example: 'https://cdn.example.com/headphones.jpg' },
+          },
+        },
+        ShopperVariantSummary: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 10 },
+            sku: { type: 'string', example: 'WH-BLK-128' },
+            title: { type: 'string', nullable: true, example: 'Black / 128GB' },
+            image: { type: 'string', nullable: true, example: 'https://cdn.example.com/headphones-black.jpg' },
+          },
+        },
+        CartMergeIssue: {
+          type: 'object',
+          properties: {
+            cartItemId: { type: 'integer', example: 25 },
+            productId: { type: 'integer', example: 1 },
+            variantId: { type: 'integer', nullable: true, example: 10 },
+            priceChanged: { type: 'boolean', example: true },
+            outOfStock: { type: 'boolean', example: false },
+          },
+        },
+        CartItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 25 },
+            productId: { type: 'integer', example: 1 },
+            variantId: { type: 'integer', nullable: true, example: 10 },
+            product: {
+              $ref: '#/components/schemas/ShopperProductSummary',
+            },
+            variant: {
+              allOf: [{ $ref: '#/components/schemas/ShopperVariantSummary' }],
+              nullable: true,
+            },
+            quantity: { type: 'integer', example: 2 },
+            unitPrice: { type: 'number', format: 'float', example: 1000 },
+            latestPrice: { type: 'number', format: 'float', example: 1200 },
+            priceChanged: { type: 'boolean', example: true },
+            outOfStock: { type: 'boolean', example: false },
+            availableStock: { type: 'integer', nullable: true, example: 5 },
+            allowBackorder: { type: 'boolean', example: false },
+            productActive: { type: 'boolean', example: true },
+            variantActive: { type: 'boolean', example: true },
+            lineTotal: { type: 'number', format: 'float', example: 2000 },
+            latestLineTotal: { type: 'number', format: 'float', example: 2400 },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        Cart: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', nullable: true, example: 4 },
+            currency: { type: 'string', example: 'USD' },
+            lineCount: { type: 'integer', example: 3 },
+            itemCount: { type: 'integer', example: 6 },
+            subtotal: { type: 'number', format: 'float', example: 3000 },
+            latestSubtotal: { type: 'number', format: 'float', example: 3400 },
+            items: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/CartItem',
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time', nullable: true },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CartMergeSummary: {
+          type: 'object',
+          properties: {
+            guestId: { type: 'string', nullable: true, example: 'guest_2f84af93-5a46-4b9b-8b0a-891b8b3d4a44' },
+            sourceCartFound: { type: 'boolean', example: true },
+            mergedItems: { type: 'integer', example: 2 },
+            mergedQuantity: { type: 'integer', example: 3 },
+            removedGuestCart: { type: 'boolean', example: true },
+            issues: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/CartMergeIssue',
+              },
+            },
+          },
+        },
+        CartSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Cart fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                cart: {
+                  $ref: '#/components/schemas/Cart',
+                },
+                identity: {
+                  $ref: '#/components/schemas/ShopperIdentity',
+                },
+              },
+            },
+          },
+        },
+        CartMergeSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Cart merged successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                cart: {
+                  $ref: '#/components/schemas/Cart',
+                },
+                identity: {
+                  $ref: '#/components/schemas/ShopperIdentity',
+                },
+                merge: {
+                  $ref: '#/components/schemas/CartMergeSummary',
+                },
+              },
+            },
+          },
+        },
+        WishlistItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 11 },
+            productId: { type: 'integer', example: 1 },
+            variantId: { type: 'integer', nullable: true, example: 10 },
+            product: {
+              $ref: '#/components/schemas/ShopperProductSummary',
+            },
+            variant: {
+              allOf: [{ $ref: '#/components/schemas/ShopperVariantSummary' }],
+              nullable: true,
+            },
+            latestPrice: { type: 'number', format: 'float', nullable: true, example: 1200 },
+            availableStock: { type: 'integer', nullable: true, example: 8 },
+            productActive: { type: 'boolean', example: true },
+            variantActive: { type: 'boolean', example: true },
+            inStock: { type: 'boolean', example: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        Wishlist: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', nullable: true, example: 7 },
+            itemCount: { type: 'integer', example: 4 },
+            items: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/WishlistItem',
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time', nullable: true },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        WishlistMergeSummary: {
+          type: 'object',
+          properties: {
+            guestId: { type: 'string', nullable: true, example: 'guest_2f84af93-5a46-4b9b-8b0a-891b8b3d4a44' },
+            sourceWishlistFound: { type: 'boolean', example: true },
+            mergedItems: { type: 'integer', example: 2 },
+            ignoredDuplicates: { type: 'integer', example: 1 },
+            removedGuestWishlist: { type: 'boolean', example: true },
+          },
+        },
+        WishlistSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Wishlist fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                wishlist: {
+                  $ref: '#/components/schemas/Wishlist',
+                },
+                identity: {
+                  $ref: '#/components/schemas/ShopperIdentity',
+                },
+              },
+            },
+          },
+        },
+        WishlistMergeSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Wishlist merged successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                wishlist: {
+                  $ref: '#/components/schemas/Wishlist',
+                },
+                identity: {
+                  $ref: '#/components/schemas/ShopperIdentity',
+                },
+                merge: {
+                  $ref: '#/components/schemas/WishlistMergeSummary',
+                },
+              },
+            },
+          },
+        },
+        AuthMergeSummary: {
+          type: 'object',
+          properties: {
+            guestId: { type: 'string', nullable: true, example: 'guest_2f84af93-5a46-4b9b-8b0a-891b8b3d4a44' },
+            cart: {
+              allOf: [{ $ref: '#/components/schemas/CartMergeSummary' }],
+              nullable: true,
+            },
+            wishlist: {
+              allOf: [{ $ref: '#/components/schemas/WishlistMergeSummary' }],
+              nullable: true,
             },
           },
         },

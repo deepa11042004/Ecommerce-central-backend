@@ -18,6 +18,10 @@ const defineVariantAttributeValueModel = require('../../modules/product/models/v
 const defineProductMediaModel = require('../../modules/product/models/productMedia.model');
 const defineInventoryModel = require('../../modules/product/models/inventory.model');
 const defineProductMetaModel = require('../../modules/product/models/productMeta.model');
+const defineCartModel = require('../../modules/cart/models/cart.model');
+const defineCartItemModel = require('../../modules/cart/models/cartItem.model');
+const defineWishlistModel = require('../../modules/wishlist/models/wishlist.model');
+const defineWishlistItemModel = require('../../modules/wishlist/models/wishlistItem.model');
 
 const db = {};
 
@@ -38,6 +42,10 @@ db.VariantAttributeValue = defineVariantAttributeValueModel(sequelize, DataTypes
 db.ProductMedia = defineProductMediaModel(sequelize, DataTypes);
 db.Inventory = defineInventoryModel(sequelize, DataTypes);
 db.ProductMeta = defineProductMetaModel(sequelize, DataTypes);
+db.Cart = defineCartModel(sequelize, DataTypes);
+db.CartItem = defineCartItemModel(sequelize, DataTypes);
+db.Wishlist = defineWishlistModel(sequelize, DataTypes);
+db.WishlistItem = defineWishlistItemModel(sequelize, DataTypes);
 
 Object.values(db).forEach((model) => {
   if (typeof model.associate === 'function') {

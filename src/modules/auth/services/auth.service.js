@@ -1,11 +1,14 @@
 const bcrypt = require('bcryptjs');
 const ApiError = require('../../../core/errors/ApiError');
 const { ROLES } = require('../../../constants/roles');
+const { sequelize } = require('../../../database/models');
 const {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
 } = require('../../../utils/jwt');
+const CartService = require('../../cart/services/cart.service');
+const WishlistService = require('../../wishlist/services/wishlist.service');
 const UserRepository = require('../repositories/user.repository');
 
 class AuthService {
@@ -39,14 +42,16 @@ class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  static async login({ email, password }) {
+  static async login({ email, password }, options = {}) {
     const user = await this.validateCredentials({ email, password });
 
     if (user.role?.name !== ROLES.CUSTOMER) {
       throw ApiError.forbidden('Use your dedicated panel login endpoint');
     }
 
-    return this.buildAuthResponse(user);
+    const merge = await this.mergeGuestCommerceState(user.id, options.guestId);
+
+    return this.buildAuthResponse(user, { merge });
   }
 
   static async loginAdminPanel({ email, password }) {
@@ -113,13 +118,43 @@ class AuthService {
     }
   }
 
-  static buildAuthResponse(user) {
+  static async mergeGuestCommerceState(userId, guestId) {
+    if (!guestId) {
+      return null;
+    }
+
+    return sequelize.transaction(async (transaction) => {
+      const cartMerge = await CartService.mergeGuestCartIntoUser(
+        { userId, guestId },
+        {
+          transaction,
+          strictGuestIdentity: false,
+        }
+      );
+      const wishlistMerge = await WishlistService.mergeGuestWishlistIntoUser(
+        { userId, guestId },
+        {
+          transaction,
+          strictGuestIdentity: false,
+        }
+      );
+
+      return {
+        guestId,
+        cart: cartMerge.merge,
+        wishlist: wishlistMerge.merge,
+      };
+    });
+  }
+
+  static buildAuthResponse(user, extraData = {}) {
     const userData = this.toAuthUser(user);
 
     return {
       user: userData,
       accessToken: generateAccessToken(userData),
       refreshToken: generateRefreshToken(userData),
+      ...extraData,
     };
   }
 

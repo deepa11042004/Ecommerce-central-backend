@@ -99,7 +99,7 @@ router.post('/uploads', auth(), can(PERMISSIONS.PRODUCT_CREATE), uploadProductIm
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProductsSchema), controller.findAll);
+router.get('/', validate(listProductsSchema), controller.findAll);
 
 /**
  * @swagger
@@ -137,7 +137,7 @@ router.get('/', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProductsSche
  *             schema:
  *               $ref: '#/components/schemas/ProductListSuccessResponse'
  */
-router.get('/search', auth(), can(PERMISSIONS.PRODUCT_READ), validate(listProductsSchema), controller.search);
+router.get('/search', validate(listProductsSchema), controller.search);
 
 /**
  * @swagger
@@ -456,7 +456,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', auth(), can(PERMISSIONS.PRODUCT_READ), validate(getProductByIdSchema), controller.findOne);
+router.get('/:id', validate(getProductByIdSchema), controller.findOne);
 
 /**
  * @swagger

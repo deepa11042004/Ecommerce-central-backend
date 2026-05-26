@@ -163,6 +163,16 @@ const defineProductModel = (sequelize, DataTypes) => {
       foreignKey: 'productId',
       as: 'metaEntries',
     });
+
+    Product.hasMany(models.CartItem, {
+      foreignKey: 'productId',
+      as: 'cartItems',
+    });
+
+    Product.hasMany(models.WishlistItem, {
+      foreignKey: 'productId',
+      as: 'wishlistItems',
+    });
   };
 
   return Product;

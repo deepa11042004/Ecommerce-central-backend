@@ -96,6 +96,16 @@ const defineProductVariantModel = (sequelize, DataTypes) => {
       foreignKey: 'variantId',
       as: 'media',
     });
+
+    ProductVariant.hasMany(models.CartItem, {
+      foreignKey: 'variantId',
+      as: 'cartItems',
+    });
+
+    ProductVariant.hasMany(models.WishlistItem, {
+      foreignKey: 'variantId',
+      as: 'wishlistItems',
+    });
   };
 
   return ProductVariant;

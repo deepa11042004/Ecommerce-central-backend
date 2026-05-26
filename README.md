@@ -51,6 +51,27 @@ Supported out of the box:
 - many-to-many category assignment
 - generalized search/filter/sort/pagination
 
+## Cart and Wishlist Engine
+
+The backend now includes reusable cart and wishlist modules designed for any ecommerce niche.
+
+Core behaviors:
+- guest cart and guest wishlist persistence through backend-managed `guestId`
+- authenticated customer cart and wishlist persistence by `user_id`
+- automatic guest-to-user merge on customer login
+- manual merge endpoints for explicit client sync flows
+- variant-aware item identity using `product_id + variant_id`
+- quantity merge for duplicate cart lines
+- duplicate prevention for wishlist lines
+- live stock and latest-price drift flags on cart reads
+- transaction-safe merge and mutation flows
+
+Guest identity strategy:
+- backend generates a UUID-based `guestId`
+- guest identity is stored in a cookie by default
+- clients may also forward the same identity in the `x-guest-id` header
+- after customer login, guest cart and wishlist are merged into the user account and the guest cookie is cleared
+
 ## Database Design (Why Each Table Exists)
 
 1. roles
@@ -106,6 +127,18 @@ Supported out of the box:
 16. product_meta
 - generic extensibility key-value store for future needs without migrations.
 
+17. wishlists
+- owner container for guest or authenticated customer wishlist state.
+
+18. wishlist_items
+- unique wishlist entries per product or product variant.
+
+19. carts
+- owner container for guest or authenticated customer cart state.
+
+20. cart_items
+- quantity-bearing cart lines with stored unit price snapshots.
+
 ## Core Product Fields
 
 products table contains:
@@ -153,6 +186,20 @@ Auth:
 - POST /auth/admin
 - POST /auth/developer
 - POST /auth/refresh-token
+
+Cart:
+- GET /cart
+- POST /cart/items
+- PATCH /cart/items/:id
+- DELETE /cart/items/:id
+- DELETE /cart/clear
+- POST /cart/merge
+
+Wishlist:
+- GET /wishlist
+- POST /wishlist/items
+- DELETE /wishlist/items/:id
+- POST /wishlist/merge
 
 Products:
 - POST /products
@@ -289,16 +336,37 @@ GET /api/v1/categories/tree:
 - returns nested tree with unlimited depth
 - supports optional status filter
 
+## Guest Merge Flow
+
+1. Anonymous shopper hits any cart or wishlist endpoint.
+2. Backend assigns a `guestId` and persists guest state in MySQL.
+3. Shopper logs in with `POST /api/v1/auth/login`.
+4. Auth service merges guest cart and guest wishlist into the customer account inside a transaction.
+5. Subsequent reads on any device use the user-owned cart and wishlist records.
+
+Cart rules:
+- add/update validates product existence, active status, variant validity, quantity, stock, and current price
+- cart lines store `unit_price` snapshots
+- `GET /cart` also returns `latestPrice`, `priceChanged`, and `outOfStock`
+
+Wishlist rules:
+- add validates product and variant state
+- duplicates are ignored
+- merge keeps unique entries only
+
 ## Swagger
 
 - URL: /api-docs
 - Includes:
   - auth APIs
+  - cart APIs
+  - wishlist APIs
   - product APIs
   - category API
   - attribute structures
   - variant structures
   - JWT bearer auth
+  - guest identity header/cookie flow
   - request/response examples
   - role/permission descriptions
 
@@ -312,7 +380,7 @@ npm install
 
 2. Configure environment
 - copy .env.example to .env
-- update DB, JWT, and runtime settings
+- update DB, JWT, runtime settings, and `DEFAULT_CURRENCY` if needed
 
 3. Create database
 

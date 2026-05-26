@@ -47,8 +47,11 @@ router.post('/register', validate(registerSchema), controller.register);
  *     summary: Customer login
  *     description: |
  *       Authenticate customer accounts with email and password.
+ *       If a guestId cookie or x-guest-id header is present, the backend automatically merges the guest cart and guest wishlist into the customer account inside a transaction.
  *       Admin/super_admin must use POST /admin and developer must use POST /developer.
  *       Customer accounts are not seeded by default. Register first via POST /register.
+ *     parameters:
+ *       - $ref: '#/components/parameters/GuestIdentityHeader'
  *     requestBody:
  *       required: true
  *       content:

@@ -2,11 +2,17 @@ const { sendSuccess } = require('../../../core/http/response');
 const asyncHandler = require('../../../utils/asyncHandler');
 const AuthService = require('../services/auth.service');
 const { getCookie, setAuthCookies } = require('../utils/auth.cookies');
+const { clearGuestCookie, readGuestId } = require('../../../utils/guestIdentity');
 
 const login = asyncHandler(async (req, res) => {
-  const data = await AuthService.login(req.body);
+  const guestId = readGuestId(req);
+  const data = await AuthService.login(req.body, { guestId });
 
   setAuthCookies(res, data);
+
+  if (guestId) {
+    clearGuestCookie(res);
+  }
 
   return sendSuccess(res, {
     statusCode: 200,

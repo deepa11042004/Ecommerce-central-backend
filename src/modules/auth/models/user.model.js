@@ -58,6 +58,16 @@ const defineUserModel = (sequelize, DataTypes) => {
       foreignKey: 'roleId',
       as: 'role',
     });
+
+    User.hasOne(models.Cart, {
+      foreignKey: 'userId',
+      as: 'cart',
+    });
+
+    User.hasOne(models.Wishlist, {
+      foreignKey: 'userId',
+      as: 'wishlist',
+    });
   };
 
   return User;

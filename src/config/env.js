@@ -19,6 +19,7 @@ const schema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().min(24).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
+  DEFAULT_CURRENCY: Joi.string().trim().length(3).default('USD'),
 
   BCRYPT_SALT_ROUNDS: Joi.number().integer().min(8).max(15).default(10),
   CORS_ORIGIN: Joi.string().default('*'),
@@ -37,5 +38,6 @@ const normalizedApiPrefix = value.API_PREFIX
   : '/api/v1';
 
 value.API_PREFIX = normalizedApiPrefix === '/' ? '/api/v1' : normalizedApiPrefix;
+value.DEFAULT_CURRENCY = String(value.DEFAULT_CURRENCY || 'USD').trim().toUpperCase();
 
 module.exports = value;
