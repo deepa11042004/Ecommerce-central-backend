@@ -23,7 +23,7 @@ const schema = Joi.object({
 
   RAZORPAY_KEY_ID: Joi.string().trim().required(),
   RAZORPAY_SECRET: Joi.string().trim().required(),
-  RAZORPAY_WEBHOOK_SECRET: Joi.string().trim().required(),
+  RAZORPAY_WEBHOOK_SECRET: Joi.string().trim(),
 
   BCRYPT_SALT_ROUNDS: Joi.number().integer().min(8).max(15).default(10),
   CORS_ORIGIN: Joi.string().default('*'),
