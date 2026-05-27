@@ -21,8 +21,8 @@ const schema = Joi.object({
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
   DEFAULT_CURRENCY: Joi.string().trim().length(3).default('USD'),
 
-  RAZORPAY_KEY_ID: Joi.string().trim().required(),
-  RAZORPAY_SECRET: Joi.string().trim().required(),
+  RAZORPAY_KEY_ID: Joi.string().trim(),
+  RAZORPAY_SECRET: Joi.string().trim(),
   RAZORPAY_WEBHOOK_SECRET: Joi.string().trim(),
 
   BCRYPT_SALT_ROUNDS: Joi.number().integer().min(8).max(15).default(10),
