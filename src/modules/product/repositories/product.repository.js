@@ -216,6 +216,14 @@ class ProductRepository {
     });
   }
 
+  static findVariantImagePathsByProductId(productId, { transaction } = {}) {
+    return ProductVariant.findAll({
+      where: { productId },
+      attributes: ['image'],
+      transaction,
+    });
+  }
+
   static createVariant(payload, { transaction } = {}) {
     return ProductVariant.create(payload, { transaction });
   }
@@ -242,6 +250,14 @@ class ProductRepository {
       }
 
       return ProductMedia.bulkCreate(rows, { transaction });
+    });
+  }
+
+  static findProductMediaPathsByProductId(productId, { transaction } = {}) {
+    return ProductMedia.findAll({
+      where: { productId },
+      attributes: ['url'],
+      transaction,
     });
   }
 

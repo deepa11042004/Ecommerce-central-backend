@@ -1,6 +1,7 @@
 const express = require('express');
 const { routes: authRoutes, panelRoutes: panelAuthRoutes } = require('../modules/auth');
 const { routes: cartRoutes } = require('../modules/cart');
+const { routes: mediaRoutes } = require('../modules/media');
 const { routes: productRoutes, categoryRoutes, brandRoutes } = require('../modules/product');
 const { routes: rbacRoutes } = require('../modules/rbac');
 const { routes: wishlistRoutes } = require('../modules/wishlist');
@@ -32,6 +33,7 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/auth', panelAuthRoutes);
 router.use('/cart', cartRoutes);
+router.use('/media', mediaRoutes);
 router.use('/products', productRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/brands', brandRoutes);

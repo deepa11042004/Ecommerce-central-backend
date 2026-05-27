@@ -20,6 +20,10 @@ const defineCategoryModel = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      image: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+      },
       parentId: {
         type: DataTypes.BIGINT.UNSIGNED,
         allowNull: true,

@@ -21,6 +21,10 @@ const defineBrandModel = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      logo: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+      },
       status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false,

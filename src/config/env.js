@@ -25,6 +25,16 @@ const schema = Joi.object({
   CORS_ORIGIN: Joi.string().default('*'),
   RATE_LIMIT_WINDOW_MS: Joi.number().integer().min(1000).default(900000),
   RATE_LIMIT_MAX: Joi.number().integer().min(1).default(150),
+
+  UPLOAD_BASE_PATH: Joi.string().trim().default('uploads'),
+  ALLOWED_IMAGE_TYPES: Joi.string().trim().default('image/jpeg,image/png,image/webp'),
+  ALLOWED_IMAGE_EXTENSIONS: Joi.string().trim().default('.jpg,.jpeg,.png,.webp'),
+  MAX_PRODUCT_IMAGE_SIZE: Joi.number().integer().min(1024).default(5 * 1024 * 1024),
+  MAX_VARIANT_IMAGE_SIZE: Joi.number().integer().min(1024).default(5 * 1024 * 1024),
+  MAX_CATEGORY_IMAGE_SIZE: Joi.number().integer().min(1024).default(3 * 1024 * 1024),
+  MAX_BRAND_IMAGE_SIZE: Joi.number().integer().min(1024).default(3 * 1024 * 1024),
+  MAX_AVATAR_SIZE: Joi.number().integer().min(1024).default(2 * 1024 * 1024),
+  MAX_TEMP_IMAGE_SIZE: Joi.number().integer().min(1024).default(5 * 1024 * 1024),
 }).unknown();
 
 const { value, error } = schema.validate(process.env, { abortEarly: false });

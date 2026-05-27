@@ -66,6 +66,10 @@ const options = {
         name: 'Variants',
         description: 'Sellable variant and inventory structures (documented in product payloads)',
       },
+      {
+        name: 'Media',
+        description: 'Centralized image upload, replacement, and deletion endpoints',
+      },
     ],
     components: {
       securitySchemes: {
@@ -184,6 +188,11 @@ const options = {
             fullName: {
               type: 'string',
               example: 'John Doe',
+            },
+            avatar: {
+              type: 'string',
+              nullable: true,
+              example: 'uploads/users/2026-05/john-avatar-1748123123-ab12.webp',
             },
             email: {
               type: 'string',

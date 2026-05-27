@@ -164,6 +164,7 @@ class AuthService {
       firstName: user.firstName || null,
       lastName: user.lastName || null,
       fullName: user.fullName,
+      avatar: user.avatar || null,
       email: user.email,
       role: user.role?.name || null,
       permissions: user.role?.permissions?.map((permission) => permission.key) || [],

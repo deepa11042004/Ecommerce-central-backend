@@ -3,6 +3,7 @@ const { sequelize } = require('../../../database/models');
 const { parsePagination, buildPaginationMeta } = require('../../../utils/pagination');
 const { parseSort, parseAttributeFilters } = require('../../../utils/filtering');
 const { generateSlug } = require('../../../utils/slug');
+const MediaService = require('../../media/services/media.service');
 const ProductRepository = require('../repositories/product.repository');
 
 const DEFAULT_SORT = {
@@ -143,7 +144,9 @@ class ProductService {
   }
 
   static async update(id, payload) {
-    return sequelize.transaction(async (transaction) => {
+    const cleanupPaths = [];
+
+    const updatedProduct = await sequelize.transaction(async (transaction) => {
       const product = await ProductRepository.findByIdBasic(id, { transaction });
 
       if (!product) {
@@ -184,6 +187,12 @@ class ProductService {
         seoTitle: payload.seoTitle,
         seoDescription: payload.seoDescription,
       };
+
+      const hasThumbnailUpdate = Object.prototype.hasOwnProperty.call(payload, 'thumbnail');
+
+      if (hasThumbnailUpdate && product.thumbnail && payload.thumbnail !== product.thumbnail) {
+        cleanupPaths.push(product.thumbnail);
+      }
 
       if (payload.slug) {
         nextPayload.slug = await this.generateUniqueProductSlug(payload.slug, product.id, { transaction });
@@ -235,6 +244,8 @@ class ProductService {
 
         const attributesForVariants = normalizedAttributes || await this.getExistingNormalizedAttributes(product.id, { transaction });
 
+        const previousVariantImageRows = await ProductRepository.findVariantImagePathsByProductId(product.id, { transaction });
+
         await ProductRepository.deleteVariantsByProductId(product.id, { transaction });
 
         const normalizedVariants = await this.normalizeVariants({
@@ -244,10 +255,27 @@ class ProductService {
           normalizedAttributes: attributesForVariants,
           transaction,
         });
+
+        const nextVariantImageSet = new Set(
+          normalizedVariants
+            .map((variant) => variant.image)
+            .filter((item) => typeof item === 'string' && item.trim())
+        );
+
+        previousVariantImageRows
+          .map((row) => row.image)
+          .filter((item) => typeof item === 'string' && item.trim())
+          .forEach((item) => {
+            if (!nextVariantImageSet.has(item)) {
+              cleanupPaths.push(item);
+            }
+          });
+
         variantIdBySku = await this.persistVariants(product.id, normalizedVariants, { transaction });
       }
 
       if (payload.media) {
+        const existingMediaRows = await ProductRepository.findProductMediaPathsByProductId(product.id, { transaction });
         let finalVariantMap = variantIdBySku;
 
         if (!finalVariantMap || finalVariantMap.size === 0) {
@@ -255,9 +283,22 @@ class ProductService {
           finalVariantMap = new Map(existingVariants.map((variant) => [variant.sku, variant.id]));
         }
 
-        await ProductRepository.replaceProductMedia(product.id, this.toMediaRows(product.id, payload.media, finalVariantMap), {
+        const nextMediaRows = this.toMediaRows(product.id, payload.media, finalVariantMap);
+
+        await ProductRepository.replaceProductMedia(product.id, nextMediaRows, {
           transaction,
         });
+
+        const nextPathSet = new Set(nextMediaRows.map((row) => row.url));
+
+        existingMediaRows
+          .map((row) => row.url)
+          .filter((item) => typeof item === 'string' && item.trim())
+          .forEach((item) => {
+            if (!nextPathSet.has(item)) {
+              cleanupPaths.push(item);
+            }
+          });
       }
 
       if (payload.meta) {
@@ -266,18 +307,34 @@ class ProductService {
 
       return ProductRepository.findById(product.id, { transaction });
     });
+
+    await MediaService.deleteFiles(this.uniqueNonEmptyPaths(cleanupPaths));
+
+    return updatedProduct;
   }
 
   static async delete(id) {
-    return sequelize.transaction(async (transaction) => {
-      const product = await ProductRepository.findByIdBasic(id, { transaction });
+    const cleanupPaths = [];
+
+    await sequelize.transaction(async (transaction) => {
+      const product = await ProductRepository.findById(id, { transaction });
 
       if (!product) {
         throw ApiError.notFound('Product not found');
       }
 
+      cleanupPaths.push(product.thumbnail);
+
+      (product.media || []).forEach((entry) => cleanupPaths.push(entry.url));
+      (product.variants || []).forEach((variant) => {
+        cleanupPaths.push(variant.image);
+        (variant.media || []).forEach((entry) => cleanupPaths.push(entry.url));
+      });
+
       await ProductRepository.delete(product, { transaction });
     });
+
+    await MediaService.deleteFiles(this.uniqueNonEmptyPaths(cleanupPaths));
   }
 
   static async generateVariantsFromAttributes(payload = {}) {
@@ -370,7 +427,9 @@ class ProductService {
   }
 
   static async saveVariants(id, payload) {
-    return sequelize.transaction(async (transaction) => {
+    const cleanupPaths = [];
+
+    const updatedProduct = await sequelize.transaction(async (transaction) => {
       const product = await ProductRepository.findByIdBasic(id, { transaction });
 
       if (!product) {
@@ -384,6 +443,8 @@ class ProductService {
       const normalizedAttributes = await this.getExistingNormalizedAttributes(product.id, { transaction });
 
       if (payload.replaceExisting !== false) {
+        const previousVariantImageRows = await ProductRepository.findVariantImagePathsByProductId(product.id, { transaction });
+        previousVariantImageRows.forEach((row) => cleanupPaths.push(row.image));
         await ProductRepository.deleteVariantsByProductId(product.id, { transaction });
       }
 
@@ -398,6 +459,7 @@ class ProductService {
       const variantIdBySku = await this.persistVariants(product.id, normalizedVariants, { transaction });
 
       if (payload.media) {
+        const existingMediaRows = await ProductRepository.findProductMediaPathsByProductId(product.id, { transaction });
         let variantMap = variantIdBySku;
 
         if (!variantMap.size || payload.replaceExisting === false) {
@@ -405,13 +467,42 @@ class ProductService {
           variantMap = new Map(allVariants.map((variant) => [variant.sku, variant.id]));
         }
 
-        await ProductRepository.replaceProductMedia(product.id, this.toMediaRows(product.id, payload.media, variantMap), {
+        const nextMediaRows = this.toMediaRows(product.id, payload.media, variantMap);
+
+        await ProductRepository.replaceProductMedia(product.id, nextMediaRows, {
           transaction,
         });
+
+        const nextPathSet = new Set(nextMediaRows.map((row) => row.url));
+
+        existingMediaRows
+          .map((row) => row.url)
+          .filter((item) => typeof item === 'string' && item.trim())
+          .forEach((item) => {
+            if (!nextPathSet.has(item)) {
+              cleanupPaths.push(item);
+            }
+          });
       }
 
       return ProductRepository.findById(product.id, { transaction });
     });
+
+    const nextVariantImageSet = new Set(
+      (payload.variants || [])
+        .map((variant) => variant.image)
+        .filter((item) => typeof item === 'string' && item.trim())
+    );
+
+    const filteredCleanupPaths = this.uniqueNonEmptyPaths(cleanupPaths).filter((item) => !nextVariantImageSet.has(item));
+
+    await MediaService.deleteFiles(filteredCleanupPaths);
+
+    return updatedProduct;
+  }
+
+  static uniqueNonEmptyPaths(values = []) {
+    return [...new Set(values.filter((item) => typeof item === 'string' && item.trim()))];
   }
 
   static async resolveVariantByAttributes(id, payload) {

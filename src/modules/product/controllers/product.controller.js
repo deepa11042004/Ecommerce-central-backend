@@ -1,18 +1,20 @@
 const { sendSuccess } = require('../../../core/http/response');
-const ApiError = require('../../../core/errors/ApiError');
 const asyncHandler = require('../../../utils/asyncHandler');
+const MediaService = require('../../media/services/media.service');
 const ProductService = require('../services/product.service');
 
 const uploadImage = asyncHandler(async (req, res) => {
-  if (!req.file) {
-    throw ApiError.badRequest('Image file is required');
-  }
+  const uploaded = await MediaService.uploadFile({
+    section: 'products',
+    file: req.file,
+    baseName: req.body?.baseName,
+  });
 
   return sendSuccess(res, {
     statusCode: 201,
     message: 'Image uploaded successfully',
     data: {
-      url: `/uploads/products/${req.file.filename}`,
+      path: uploaded.path,
     },
   });
 });

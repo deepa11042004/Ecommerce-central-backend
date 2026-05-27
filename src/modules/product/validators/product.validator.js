@@ -1,5 +1,11 @@
 const Joi = require('joi');
 
+const relativeUploadPathSchema = Joi.string()
+  .pattern(/^uploads\/[a-z0-9-]+\/[0-9]{4}-[0-9]{2}\/[a-z0-9-]+\.(jpg|jpeg|png|webp)$/i)
+  .messages({
+    'string.pattern.base': 'Media path must be a relative uploads path (e.g. uploads/products/2026-05/file.webp)',
+  });
+
 const attributeValueSchema = Joi.alternatives().try(
   Joi.string().trim().min(1).max(190),
   Joi.object({
@@ -38,7 +44,7 @@ const variantSchema = Joi.object({
   comparePrice: Joi.number().min(0).precision(2).optional().allow(null),
   costPrice: Joi.number().min(0).precision(2).optional().allow(null),
   status: Joi.string().valid('active', 'inactive').default('active'),
-  image: Joi.string().uri().optional().allow(null, ''),
+  image: relativeUploadPathSchema.optional().allow(null, ''),
   barcode: Joi.string().trim().max(120).optional().allow(null, ''),
   stock: Joi.number().integer().min(0).optional(),
   position: Joi.number().integer().min(0).optional(),
@@ -52,7 +58,7 @@ const variantSchema = Joi.object({
 }).or('price', 'salePrice');
 
 const mediaSchema = Joi.object({
-  url: Joi.string().uri().required(),
+  url: relativeUploadPathSchema.required(),
   mediaType: Joi.string().valid('image', 'video', 'document', 'external').default('image'),
   altText: Joi.string().max(255).optional().allow(null, ''),
   position: Joi.number().integer().min(0).optional(),
@@ -110,7 +116,7 @@ const createProductSchema = Joi.object({
       otherwise: Joi.optional().allow(null),
     }),
     status: Joi.string().valid('active', 'inactive').default('active'),
-    thumbnail: Joi.string().uri().allow(null, '').optional(),
+    thumbnail: relativeUploadPathSchema.allow(null, '').optional(),
     seoTitle: Joi.string().max(255).allow(null, '').optional(),
     seoDescription: Joi.string().max(500).allow(null, '').optional(),
     categoryIds: Joi.array().items(Joi.number().integer().positive()).unique().optional().default([]),
@@ -148,7 +154,7 @@ const updateProductSchema = Joi.object({
     comparePrice: Joi.number().min(0).precision(2).optional().allow(null),
     quantity: Joi.number().integer().min(0).optional().allow(null),
     status: Joi.string().valid('active', 'inactive').optional(),
-    thumbnail: Joi.string().uri().allow(null, '').optional(),
+    thumbnail: relativeUploadPathSchema.allow(null, '').optional(),
     seoTitle: Joi.string().max(255).allow(null, '').optional(),
     seoDescription: Joi.string().max(500).allow(null, '').optional(),
     categoryIds: Joi.array().items(Joi.number().integer().positive()).unique().optional(),

@@ -27,6 +27,10 @@ const defineUserModel = (sequelize, DataTypes) => {
         allowNull: false,
         unique: true,
       },
+      avatar: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+      },
       passwordHash: {
         type: DataTypes.STRING(255),
         allowNull: false,

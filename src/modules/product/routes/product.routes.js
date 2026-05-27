@@ -4,7 +4,7 @@ const auth = require('../../../middleware/auth.middleware');
 const can = require('../../../middleware/permission.middleware');
 const validate = require('../../../middleware/validate.middleware');
 const { PERMISSIONS } = require('../../../constants/permissions');
-const { uploadProductImage } = require('../middleware/product-upload.middleware');
+const { singleImageUpload } = require('../../media/middleware/media-upload.middleware');
 const {
   createProductSchema,
   updateProductSchema,
@@ -18,7 +18,7 @@ const {
 
 const router = express.Router();
 
-router.post('/uploads', auth(), can(PERMISSIONS.PRODUCT_CREATE), uploadProductImage, controller.uploadImage);
+router.post('/uploads', auth(), can(PERMISSIONS.PRODUCT_CREATE), singleImageUpload('file'), controller.uploadImage);
 
 /**
  * @swagger

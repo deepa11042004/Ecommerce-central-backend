@@ -14,6 +14,7 @@ Each ecommerce client runs:
 - Express.js
 - MySQL
 - Sequelize ORM
+- Multer
 - JWT authentication
 - Swagger (OpenAPI)
 - Joi validation
@@ -32,6 +33,42 @@ Applied patterns:
 - Migration-first DB workflow
 - Thin controllers
 - Centralized error + response handling
+
+## Centralized Media Module
+
+Uploads are now fully centralized in a dedicated media module:
+
+- module: `src/modules/media`
+- static serving: `/uploads/*`
+- storage root: `UPLOAD_BASE_PATH` (default `uploads`)
+- DB rule: store relative path only (for example `uploads/products/2026-05/laptop-1748123123-ab12.webp`)
+- folder strategy: section + month bucket
+
+Section folders:
+
+- uploads/products/YYYY-MM/
+- uploads/variants/YYYY-MM/
+- uploads/categories/YYYY-MM/
+- uploads/brands/YYYY-MM/
+- uploads/users/YYYY-MM/
+- uploads/temp/YYYY-MM/
+
+Security controls:
+
+- strict MIME allow-list
+- strict extension allow-list
+- configurable per-section size limits
+- path traversal prevention
+- safe filename generation
+
+Entity-bound media replacement is transactional:
+
+1. upload new file
+2. update DB path
+3. commit transaction
+4. delete previous file
+
+If DB update fails, newly uploaded file is rolled back from disk.
 
 ## Product Engine Goals
 
@@ -214,6 +251,13 @@ Products:
 
 Categories:
 - GET /categories/tree
+
+Media:
+- POST /media/upload/:section
+- PUT /media/:section/:entityId/replace
+- DELETE /media/:section/:entityId
+- PUT /media/users/me/avatar
+- DELETE /media/users/me/avatar
 
 ## Generalized Querying
 

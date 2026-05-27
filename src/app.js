@@ -13,9 +13,9 @@ const notFoundMiddleware = require('./middleware/notFound.middleware');
 const errorMiddleware = require('./middleware/error.middleware');
 
 const app = express();
-const uploadsDir = path.join(process.cwd(), 'uploads');
+const uploadsDir = path.resolve(process.cwd(), env.UPLOAD_BASE_PATH);
 
-fs.mkdirSync(path.join(uploadsDir, 'products'), { recursive: true });
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 const corsOrigin = env.CORS_ORIGIN === '*'
   ? true
