@@ -173,6 +173,11 @@ const defineProductModel = (sequelize, DataTypes) => {
       foreignKey: 'productId',
       as: 'wishlistItems',
     });
+
+    Product.hasMany(models.OrderItem, {
+      foreignKey: 'productId',
+      as: 'orderItems',
+    });
   };
 
   return Product;

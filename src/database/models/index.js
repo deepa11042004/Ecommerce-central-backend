@@ -22,6 +22,10 @@ const defineCartModel = require('../../modules/cart/models/cart.model');
 const defineCartItemModel = require('../../modules/cart/models/cartItem.model');
 const defineWishlistModel = require('../../modules/wishlist/models/wishlist.model');
 const defineWishlistItemModel = require('../../modules/wishlist/models/wishlistItem.model');
+const defineAddressModel = require('../../modules/address/models/address.model');
+const defineOrderModel = require('../../modules/order/models/order.model');
+const defineOrderItemModel = require('../../modules/order/models/orderItem.model');
+const definePaymentModel = require('../../modules/payment/models/payment.model');
 
 const db = {};
 
@@ -46,6 +50,10 @@ db.Cart = defineCartModel(sequelize, DataTypes);
 db.CartItem = defineCartItemModel(sequelize, DataTypes);
 db.Wishlist = defineWishlistModel(sequelize, DataTypes);
 db.WishlistItem = defineWishlistItemModel(sequelize, DataTypes);
+db.Address = defineAddressModel(sequelize, DataTypes);
+db.Order = defineOrderModel(sequelize, DataTypes);
+db.OrderItem = defineOrderItemModel(sequelize, DataTypes);
+db.Payment = definePaymentModel(sequelize, DataTypes);
 
 Object.values(db).forEach((model) => {
   if (typeof model.associate === 'function') {

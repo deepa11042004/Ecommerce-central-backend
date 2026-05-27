@@ -46,6 +46,18 @@ module.exports = {
         created_at: now,
         updated_at: now,
       },
+      {
+        key: PERMISSIONS.ORDER_READ,
+        description: 'Fetch orders',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        key: PERMISSIONS.ORDER_UPDATE,
+        description: 'Update order status',
+        created_at: now,
+        updated_at: now,
+      },
     ];
 
     await queryInterface.bulkInsert('roles', roleRows, {});

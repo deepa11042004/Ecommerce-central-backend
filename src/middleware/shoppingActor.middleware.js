@@ -113,14 +113,17 @@ const resolveShoppingActor = () => {
 
 const requireCustomerRole = () => {
   return asyncHandler(async (req, res, next) => {
-    if (!req.user) {
+    const authenticatedUser = await resolveAuthenticatedUser(req, res);
+
+    if (!authenticatedUser) {
       throw ApiError.unauthorized('Authentication required');
     }
 
+    req.user = toRequestUser(authenticatedUser);
     ensureCustomerUser(req.user);
     req.actor = {
       type: 'user',
-      userId: req.user.id,
+      userId: authenticatedUser.id,
       guestId: null,
     };
 

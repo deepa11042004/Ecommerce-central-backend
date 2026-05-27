@@ -106,6 +106,11 @@ const defineProductVariantModel = (sequelize, DataTypes) => {
       foreignKey: 'variantId',
       as: 'wishlistItems',
     });
+
+    ProductVariant.hasMany(models.OrderItem, {
+      foreignKey: 'variantId',
+      as: 'orderItems',
+    });
   };
 
   return ProductVariant;

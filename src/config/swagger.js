@@ -51,6 +51,30 @@ const options = {
         description: 'Guest-aware and authenticated customer wishlist endpoints with merge-on-login support',
       },
       {
+        name: 'Checkout',
+        description: 'Cart validation and order initialization endpoints',
+      },
+      {
+        name: 'Orders',
+        description: 'Customer and guest order history endpoints',
+      },
+      {
+        name: 'Payments',
+        description: 'Payment verification and payment lifecycle endpoints',
+      },
+      {
+        name: 'Addresses',
+        description: 'Billing and shipping address management endpoints',
+      },
+      {
+        name: 'Admin Orders',
+        description: 'Administrative order management endpoints',
+      },
+      {
+        name: 'Webhooks',
+        description: 'Payment provider webhook endpoints',
+      },
+      {
         name: 'Products',
         description: 'Generalized product management endpoints with dynamic attributes and variants',
       },
@@ -510,6 +534,323 @@ const options = {
                   $ref: '#/components/schemas/WishlistMergeSummary',
                 },
               },
+            },
+          },
+        },
+        AddressRequest: {
+          type: 'object',
+          required: ['fullName', 'phone', 'addressLine1', 'city', 'state', 'country', 'postalCode'],
+          properties: {
+            fullName: { type: 'string', example: 'Jane Doe' },
+            phone: { type: 'string', example: '+1-202-555-0123' },
+            addressLine1: { type: 'string', example: '221B Baker Street' },
+            addressLine2: { type: 'string', nullable: true, example: 'Apt 2B' },
+            city: { type: 'string', example: 'London' },
+            state: { type: 'string', example: 'Greater London' },
+            country: { type: 'string', example: 'UK' },
+            postalCode: { type: 'string', example: 'NW1 6XE' },
+            landmark: { type: 'string', nullable: true, example: 'Near Regents Park' },
+            type: { type: 'string', enum: ['shipping', 'billing', 'both'], example: 'shipping' },
+          },
+        },
+        AddressUpdateRequest: {
+          type: 'object',
+          properties: {
+            fullName: { type: 'string' },
+            phone: { type: 'string' },
+            addressLine1: { type: 'string' },
+            addressLine2: { type: 'string', nullable: true },
+            city: { type: 'string' },
+            state: { type: 'string' },
+            country: { type: 'string' },
+            postalCode: { type: 'string' },
+            landmark: { type: 'string', nullable: true },
+            type: { type: 'string', enum: ['shipping', 'billing', 'both'] },
+          },
+        },
+        Address: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 11 },
+            fullName: { type: 'string', example: 'Jane Doe' },
+            phone: { type: 'string', example: '+1-202-555-0123' },
+            addressLine1: { type: 'string', example: '221B Baker Street' },
+            addressLine2: { type: 'string', nullable: true, example: 'Apt 2B' },
+            city: { type: 'string', example: 'London' },
+            state: { type: 'string', example: 'Greater London' },
+            country: { type: 'string', example: 'UK' },
+            postalCode: { type: 'string', example: 'NW1 6XE' },
+            landmark: { type: 'string', nullable: true, example: 'Near Regents Park' },
+            type: { type: 'string', enum: ['shipping', 'billing', 'both'], example: 'shipping' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        AddressSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Address created successfully' },
+            data: {
+              $ref: '#/components/schemas/Address',
+            },
+          },
+        },
+        AddressListSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Addresses fetched successfully' },
+            data: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/Address',
+              },
+            },
+          },
+        },
+        CheckoutRequest: {
+          type: 'object',
+          required: ['shippingAddressId', 'billingAddressId', 'paymentMethod'],
+          properties: {
+            shippingAddressId: { type: 'integer', example: 11 },
+            billingAddressId: { type: 'integer', example: 11 },
+            paymentMethod: { type: 'string', enum: ['razorpay'], example: 'razorpay' },
+            notes: { type: 'string', nullable: true, example: 'Leave at front desk.' },
+          },
+        },
+        CheckoutTotals: {
+          type: 'object',
+          properties: {
+            subtotal: { type: 'number', format: 'float', example: 1200 },
+            taxAmount: { type: 'number', format: 'float', example: 0 },
+            shippingAmount: { type: 'number', format: 'float', example: 0 },
+            discountAmount: { type: 'number', format: 'float', example: 0 },
+            totalAmount: { type: 'number', format: 'float', example: 1200 },
+            currency: { type: 'string', example: 'INR' },
+          },
+        },
+        CheckoutSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Checkout initiated successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                orderId: { type: 'integer', example: 101 },
+                orderNumber: { type: 'string', example: 'ORD-20260527-9f2ab31c' },
+                razorpayOrderId: { type: 'string', example: 'order_JlZfzr4k2pB9c1' },
+                amount: { type: 'integer', example: 250000 },
+                currency: { type: 'string', example: 'INR' },
+                key: { type: 'string', example: 'rzp_test_123456' },
+                totals: {
+                  $ref: '#/components/schemas/CheckoutTotals',
+                },
+              },
+            },
+          },
+        },
+        PaymentVerifyRequest: {
+          type: 'object',
+          required: ['orderId', 'razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature'],
+          properties: {
+            orderId: { type: 'integer', example: 101 },
+            razorpay_order_id: { type: 'string', example: 'order_JlZfzr4k2pB9c1' },
+            razorpay_payment_id: { type: 'string', example: 'pay_JlZg0EZ3slm1tS' },
+            razorpay_signature: { type: 'string', example: 'd7b1f0a1c3f9b2...' },
+          },
+        },
+        PaymentVerifySuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Payment verified successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                verified: { type: 'boolean', example: true },
+                alreadyConfirmed: { type: 'boolean', example: false },
+                orderId: { type: 'integer', example: 101 },
+                orderStatus: { type: 'string', example: 'CONFIRMED' },
+                paymentStatus: { type: 'string', example: 'SUCCESS' },
+              },
+            },
+          },
+        },
+        OrderItemSnapshot: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 901 },
+            orderId: { type: 'integer', example: 101 },
+            productId: { type: 'integer', example: 2 },
+            variantId: { type: 'integer', nullable: true, example: 12 },
+            productNameSnapshot: { type: 'string', example: 'Wireless Headphones' },
+            skuSnapshot: { type: 'string', example: 'WH-BLK-128' },
+            imageSnapshot: { type: 'string', nullable: true, example: 'uploads/products/2026-05/wh.webp' },
+            unitPrice: { type: 'number', format: 'float', example: 1200 },
+            quantity: { type: 'integer', example: 2 },
+            totalPrice: { type: 'number', format: 'float', example: 2400 },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        PaymentSummary: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 5001 },
+            orderId: { type: 'integer', example: 101 },
+            razorpayOrderId: { type: 'string', example: 'order_JlZfzr4k2pB9c1' },
+            razorpayPaymentId: { type: 'string', nullable: true, example: 'pay_JlZg0EZ3slm1tS' },
+            amount: { type: 'number', format: 'float', example: 2500 },
+            currency: { type: 'string', example: 'INR' },
+            paymentMethod: { type: 'string', example: 'razorpay' },
+            provider: { type: 'string', example: 'razorpay' },
+            paymentStatus: { type: 'string', example: 'SUCCESS' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        OrderUserSummary: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 18 },
+            fullName: { type: 'string', example: 'Jane Doe' },
+            email: { type: 'string', example: 'jane@example.com' },
+          },
+        },
+        Order: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 101 },
+            orderNumber: { type: 'string', example: 'ORD-20260527-9f2ab31c' },
+            userId: { type: 'integer', nullable: true, example: 18 },
+            guestId: { type: 'string', nullable: true, example: 'guest_2f84af93-5a46-4b9b-8b0a-891b8b3d4a44' },
+            subtotal: { type: 'number', format: 'float', example: 1200 },
+            taxAmount: { type: 'number', format: 'float', example: 0 },
+            shippingAmount: { type: 'number', format: 'float', example: 0 },
+            discountAmount: { type: 'number', format: 'float', example: 0 },
+            totalAmount: { type: 'number', format: 'float', example: 1200 },
+            currency: { type: 'string', example: 'INR' },
+            orderStatus: { type: 'string', example: 'CONFIRMED' },
+            paymentStatus: { type: 'string', example: 'SUCCESS' },
+            paymentMethod: { type: 'string', example: 'razorpay' },
+            notes: { type: 'string', nullable: true, example: 'Leave at front desk.' },
+            billingAddressId: { type: 'integer', nullable: true, example: 11 },
+            shippingAddressId: { type: 'integer', nullable: true, example: 11 },
+            billingAddress: { $ref: '#/components/schemas/Address' },
+            shippingAddress: { $ref: '#/components/schemas/Address' },
+            user: { $ref: '#/components/schemas/OrderUserSummary' },
+            items: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/OrderItemSnapshot',
+              },
+            },
+            payments: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/PaymentSummary',
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        OrderSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Order fetched successfully' },
+            data: {
+              $ref: '#/components/schemas/Order',
+            },
+          },
+        },
+        OrderItemsSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Order items fetched successfully' },
+            data: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/OrderItemSnapshot',
+              },
+            },
+          },
+        },
+        OrderListSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Orders fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                items: {
+                  type: 'array',
+                  items: {
+                    $ref: '#/components/schemas/Order',
+                  },
+                },
+                meta: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer', example: 1 },
+                    limit: { type: 'integer', example: 10 },
+                    totalItems: { type: 'integer', example: 25 },
+                    totalPages: { type: 'integer', example: 3 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        AdminOrderListSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Orders fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                items: {
+                  type: 'array',
+                  items: {
+                    $ref: '#/components/schemas/Order',
+                  },
+                },
+                meta: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer', example: 1 },
+                    limit: { type: 'integer', example: 10 },
+                    totalItems: { type: 'integer', example: 25 },
+                    totalPages: { type: 'integer', example: 3 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        OrderStatusUpdateRequest: {
+          type: 'object',
+          required: ['status'],
+          properties: {
+            status: {
+              type: 'string',
+              enum: [
+                'PENDING_PAYMENT',
+                'CONFIRMED',
+                'PROCESSING',
+                'SHIPPED',
+                'DELIVERED',
+                'CANCELLED',
+                'REFUNDED',
+                'FAILED',
+              ],
+              example: 'PROCESSING',
             },
           },
         },

@@ -1,6 +1,10 @@
 const express = require('express');
 const { routes: authRoutes, panelRoutes: panelAuthRoutes } = require('../modules/auth');
 const { routes: cartRoutes } = require('../modules/cart');
+const { routes: checkoutRoutes } = require('../modules/checkout');
+const { routes: orderRoutes, adminRoutes: adminOrderRoutes } = require('../modules/order');
+const { routes: paymentRoutes } = require('../modules/payment');
+const { routes: addressRoutes } = require('../modules/address');
 const { routes: mediaRoutes } = require('../modules/media');
 const { routes: productRoutes, categoryRoutes, brandRoutes } = require('../modules/product');
 const { routes: rbacRoutes } = require('../modules/rbac');
@@ -33,6 +37,11 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/auth', panelAuthRoutes);
 router.use('/cart', cartRoutes);
+router.use('/checkout', checkoutRoutes);
+router.use('/orders', orderRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/addresses', addressRoutes);
+router.use('/admin/orders', adminOrderRoutes);
 router.use('/media', mediaRoutes);
 router.use('/products', productRoutes);
 router.use('/categories', categoryRoutes);

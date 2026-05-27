@@ -72,6 +72,16 @@ const defineUserModel = (sequelize, DataTypes) => {
       foreignKey: 'userId',
       as: 'wishlist',
     });
+
+    User.hasMany(models.Address, {
+      foreignKey: 'userId',
+      as: 'addresses',
+    });
+
+    User.hasMany(models.Order, {
+      foreignKey: 'userId',
+      as: 'orders',
+    });
   };
 
   return User;

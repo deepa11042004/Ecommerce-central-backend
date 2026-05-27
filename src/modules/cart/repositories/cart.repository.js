@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { Cart, CartItem, Product, ProductVariant, Inventory } = require('../../../database/models');
 
 const PRODUCT_ATTRIBUTES = [
@@ -154,6 +155,22 @@ class CartRepository {
 
   static deleteItem(item, { transaction } = {}) {
     return item.destroy({ transaction });
+  }
+
+  static deleteItemsByKeys(cartId, itemKeys, { transaction } = {}) {
+    if (!itemKeys?.length) {
+      return 0;
+    }
+
+    return CartItem.destroy({
+      where: {
+        cartId,
+        itemKey: {
+          [Op.in]: itemKeys,
+        },
+      },
+      transaction,
+    });
   }
 
   static clearItems(cartId, { transaction } = {}) {
