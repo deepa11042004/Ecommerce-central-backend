@@ -9,6 +9,7 @@ const { routes: mediaRoutes } = require('../modules/media');
 const { routes: productRoutes, categoryRoutes, brandRoutes } = require('../modules/product');
 const { routes: rbacRoutes } = require('../modules/rbac');
 const { routes: wishlistRoutes } = require('../modules/wishlist');
+const { routes: heroBannerRoutes } = require('../modules/heroBanner');
 
 const router = express.Router();
 
@@ -48,5 +49,6 @@ router.use('/categories', categoryRoutes);
 router.use('/brands', brandRoutes);
 router.use('/rbac', rbacRoutes);
 router.use('/wishlist', wishlistRoutes);
+router.use('/hero-banners', heroBannerRoutes);
 
 module.exports = router;

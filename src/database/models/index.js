@@ -26,6 +26,7 @@ const defineAddressModel = require('../../modules/address/models/address.model')
 const defineOrderModel = require('../../modules/order/models/order.model');
 const defineOrderItemModel = require('../../modules/order/models/orderItem.model');
 const definePaymentModel = require('../../modules/payment/models/payment.model');
+const defineHeroBannerModel = require('../../modules/heroBanner/models/heroBanner.model');
 
 const db = {};
 
@@ -54,6 +55,7 @@ db.Address = defineAddressModel(sequelize, DataTypes);
 db.Order = defineOrderModel(sequelize, DataTypes);
 db.OrderItem = defineOrderItemModel(sequelize, DataTypes);
 db.Payment = definePaymentModel(sequelize, DataTypes);
+db.HeroBanner = defineHeroBannerModel(sequelize, DataTypes);
 
 Object.values(db).forEach((model) => {
   if (typeof model.associate === 'function') {

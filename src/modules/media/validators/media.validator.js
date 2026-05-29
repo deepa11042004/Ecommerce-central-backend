@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const sectionSchema = Joi.string().valid('products', 'variants', 'categories', 'brands', 'users', 'temp').required();
+const sectionSchema = Joi.string().valid('products', 'variants', 'categories', 'brands', 'users', 'hero-banners', 'temp').required();
 
 const uploadSectionSchema = Joi.object({
   body: Joi.object({

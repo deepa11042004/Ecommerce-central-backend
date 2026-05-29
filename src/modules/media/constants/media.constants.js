@@ -6,6 +6,7 @@ const SECTION_KEYS = Object.freeze({
   CATEGORY: 'categories',
   BRAND: 'brands',
   USER: 'users',
+  HERO_BANNER: 'hero-banners',
   TEMP: 'temp',
 });
 
@@ -47,6 +48,7 @@ const MAX_FILE_SIZE_BY_SECTION = Object.freeze({
   [SECTION_KEYS.CATEGORY]: parseNumber(process.env.MAX_CATEGORY_IMAGE_SIZE, 3 * 1024 * 1024),
   [SECTION_KEYS.BRAND]: parseNumber(process.env.MAX_BRAND_IMAGE_SIZE, 3 * 1024 * 1024),
   [SECTION_KEYS.USER]: parseNumber(process.env.MAX_AVATAR_SIZE, 2 * 1024 * 1024),
+  [SECTION_KEYS.HERO_BANNER]: parseNumber(process.env.MAX_HERO_BANNER_IMAGE_SIZE, 5 * 1024 * 1024),
   [SECTION_KEYS.TEMP]: parseNumber(process.env.MAX_TEMP_IMAGE_SIZE, 5 * 1024 * 1024),
 });
 

@@ -67,6 +67,10 @@ const options = {
         description: 'Billing and shipping address management endpoints',
       },
       {
+        name: 'Hero Banners',
+        description: 'Homepage hero slider banner endpoints',
+      },
+      {
         name: 'Admin Orders',
         description: 'Administrative order management endpoints',
       },
@@ -605,6 +609,79 @@ const options = {
               type: 'array',
               items: {
                 $ref: '#/components/schemas/Address',
+              },
+            },
+          },
+        },
+        HeroBanner: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            title: { type: 'string', example: 'Summer Harvest Mega Sale' },
+            subtitle: { type: 'string', nullable: true, example: 'Flat 20% off on all dry fruits' },
+            link: { type: 'string', nullable: true, example: '/products?category=dry-fruits' },
+            image: { type: 'string', example: 'uploads/hero-banners/2026-05/hero-banner-1748123123-ab12.webp' },
+            isActive: { type: 'boolean', example: true },
+            sortOrder: { type: 'integer', example: 0 },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        HeroBannerCreateRequest: {
+          type: 'object',
+          required: ['title', 'image'],
+          properties: {
+            title: { type: 'string', example: 'Summer Harvest Mega Sale' },
+            subtitle: { type: 'string', nullable: true, example: 'Flat 20% off on all dry fruits' },
+            link: { type: 'string', nullable: true, example: '/products?category=dry-fruits' },
+            image: { type: 'string', example: 'uploads/hero-banners/2026-05/hero-banner-1748123123-ab12.webp' },
+            isActive: { type: 'boolean', example: true },
+            sortOrder: { type: 'integer', example: 0 },
+          },
+        },
+        HeroBannerUpdateRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            subtitle: { type: 'string', nullable: true },
+            link: { type: 'string', nullable: true },
+            image: { type: 'string' },
+            isActive: { type: 'boolean' },
+            sortOrder: { type: 'integer' },
+          },
+        },
+        HeroBannerSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Hero banner created successfully' },
+            data: {
+              $ref: '#/components/schemas/HeroBanner',
+            },
+          },
+        },
+        HeroBannerListSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Hero banners fetched successfully' },
+            data: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/HeroBanner',
+              },
+            },
+          },
+        },
+        HeroBannerDeleteSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Hero banner deleted successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer', example: 1 },
               },
             },
           },
