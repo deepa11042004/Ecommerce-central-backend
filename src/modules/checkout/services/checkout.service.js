@@ -4,6 +4,7 @@ const env = require('../../../config/env');
 const { sequelize } = require('../../../database/models');
 const { buildItemKey, normalizeCurrency, toInteger, toMoney } = require('../../../utils/shopping');
 const CartRepository = require('../../cart/repositories/cart.repository');
+const CartService = require('../../cart/services/cart.service');
 const ProductCatalogRepository = require('../../product/repositories/productCatalog.repository');
 const OrderRepository = require('../../order/repositories/order.repository');
 const PaymentRepository = require('../../payment/repositories/payment.repository');
@@ -111,11 +112,11 @@ class CheckoutService {
   }
 
   static async findCart(actor, { transaction } = {}) {
-    if (actor.userId) {
-      return CartRepository.findByUserId(actor.userId, { transaction, includeItems: true });
-    }
+    const cart = actor.userId
+      ? await CartRepository.findByUserId(actor.userId, { transaction, includeItems: true })
+      : await CartRepository.findByGuestId(actor.guestId, { transaction, includeItems: true });
 
-    return CartRepository.findByGuestId(actor.guestId, { transaction, includeItems: true });
+    return CartService.ensureCartCurrency(cart, { transaction });
   }
 
   static async resolveAddress(actor, addressId, { transaction } = {}) {

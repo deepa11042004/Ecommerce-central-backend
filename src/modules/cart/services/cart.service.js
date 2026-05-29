@@ -10,8 +10,9 @@ class CartService {
     this.ensureActor(actor);
 
     const cart = await this.findCartForActor(actor, { includeItems: true });
+    const normalizedCart = await this.ensureCartCurrency(cart);
 
-    return this.buildCartResponse(cart, actor);
+    return this.buildCartResponse(normalizedCart, actor);
   }
 
   static async addItem(actor, payload) {
@@ -307,6 +308,28 @@ class CartService {
     return normalizeCurrency(env.DEFAULT_CURRENCY, 'USD');
   }
 
+  static async ensureCartCurrency(cart, { transaction } = {}) {
+    if (!cart) {
+      return cart;
+    }
+
+    const defaultCurrency = this.getDefaultCurrency();
+    const normalizedCurrency = normalizeCurrency(cart.currency, defaultCurrency);
+
+    if (normalizedCurrency !== defaultCurrency || normalizedCurrency !== cart.currency) {
+      const updated = await cart.update(
+        {
+          currency: defaultCurrency,
+        },
+        { transaction }
+      );
+
+      return updated;
+    }
+
+    return cart;
+  }
+
   static buildIdentity(actor) {
     return actor?.userId
       ? {
@@ -446,16 +469,20 @@ class CartService {
 
   static async getOrCreateCartForActor(actor, { transaction } = {}) {
     if (actor.userId) {
-      return CartRepository.findOrCreateByUserId(actor.userId, {
+      const cart = await CartRepository.findOrCreateByUserId(actor.userId, {
         currency: this.getDefaultCurrency(),
         transaction,
       });
+
+      return this.ensureCartCurrency(cart, { transaction });
     }
 
-    return CartRepository.findOrCreateByGuestId(actor.guestId, {
+    const cart = await CartRepository.findOrCreateByGuestId(actor.guestId, {
       currency: this.getDefaultCurrency(),
       transaction,
     });
+
+    return this.ensureCartCurrency(cart, { transaction });
   }
 
   static async createCartItemWithRetry({ cartId, selection, transaction }) {
