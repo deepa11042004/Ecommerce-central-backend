@@ -426,6 +426,22 @@ class ProductRepository {
           ],
           [
             literal(`(
+              SELECT pv.id
+              FROM product_variants pv
+              LEFT JOIN inventory inv ON inv.variant_id = pv.id
+              WHERE pv.product_id = Product.id
+              ORDER BY
+                CASE
+                  WHEN COALESCE(inv.quantity, 0) > 0 THEN 0
+                  ELSE 1
+                END,
+                pv.id ASC
+              LIMIT 1
+            )`),
+            'defaultVariantId',
+          ],
+          [
+            literal(`(
               COALESCE(
                 (SELECT SUM(inv.quantity)
                 FROM product_variants pv2
