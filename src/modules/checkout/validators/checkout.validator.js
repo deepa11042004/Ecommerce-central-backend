@@ -6,6 +6,7 @@ const checkoutSchema = Joi.object({
     shippingAddressId: Joi.number().integer().positive().required(),
     billingAddressId: Joi.number().integer().positive().required(),
     paymentMethod: Joi.string().valid(...Object.values(PAYMENT_METHODS)).required(),
+    couponCode: Joi.string().trim().min(2).max(80).optional(),
     notes: Joi.string().max(1000).allow(null, '').optional(),
   }).required(),
   params: Joi.object({}).optional(),

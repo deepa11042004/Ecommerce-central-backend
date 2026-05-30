@@ -53,6 +53,26 @@ const clear = asyncHandler(async (req, res) => {
   });
 });
 
+const applyCoupon = asyncHandler(async (req, res) => {
+  const data = await CartService.applyCoupon(req.actor, req.body);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Coupon validated successfully',
+    data,
+  });
+});
+
+const removeCoupon = asyncHandler(async (req, res) => {
+  const data = await CartService.removeCoupon(req.actor);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Coupon removed successfully',
+    data,
+  });
+});
+
 const merge = asyncHandler(async (req, res) => {
   const data = await CartService.mergeGuestCartIntoUser({
     userId: req.user.id,
@@ -72,5 +92,7 @@ module.exports = {
   updateItem,
   removeItem,
   clear,
+  applyCoupon,
+  removeCoupon,
   merge,
 };

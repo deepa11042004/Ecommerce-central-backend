@@ -30,6 +30,30 @@ const PAYMENT_ATTRIBUTES = [
   'updatedAt',
 ];
 
+const ORDER_ATTRIBUTES = [
+  'id',
+  'orderNumber',
+  'userId',
+  'guestId',
+  'subtotal',
+  'taxAmount',
+  'shippingAmount',
+  'discountAmount',
+  'couponCodeSnapshot',
+  'couponDiscountSnapshot',
+  'couponTypeSnapshot',
+  'totalAmount',
+  'currency',
+  'orderStatus',
+  'paymentStatus',
+  'paymentMethod',
+  'billingAddressId',
+  'shippingAddressId',
+  'notes',
+  'createdAt',
+  'updatedAt',
+];
+
 const ADDRESS_ATTRIBUTES = [
   'id',
   'fullName',
@@ -98,7 +122,7 @@ class OrderRepository {
     includeUser = false,
     lock,
   } = {}) {
-    const options = { transaction };
+    const options = { transaction, attributes: ORDER_ATTRIBUTES };
     const include = this.buildInclude({ includeItems, includePayments, includeAddresses, includeUser });
 
     if (include.length) {

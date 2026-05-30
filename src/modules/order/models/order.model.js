@@ -43,6 +43,21 @@ const defineOrderModel = (sequelize, DataTypes) => {
         allowNull: false,
         field: 'discount_amount',
       },
+      couponCodeSnapshot: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+        field: 'coupon_code_snapshot',
+      },
+      couponDiscountSnapshot: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+        field: 'coupon_discount_snapshot',
+      },
+      couponTypeSnapshot: {
+        type: DataTypes.ENUM('PERCENTAGE', 'FIXED_AMOUNT'),
+        allowNull: true,
+        field: 'coupon_type_snapshot',
+      },
       totalAmount: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
@@ -135,6 +150,11 @@ const defineOrderModel = (sequelize, DataTypes) => {
     Order.hasMany(models.Payment, {
       foreignKey: 'orderId',
       as: 'payments',
+    });
+
+    Order.hasMany(models.CouponUsage, {
+      foreignKey: 'orderId',
+      as: 'couponUsages',
     });
   };
 

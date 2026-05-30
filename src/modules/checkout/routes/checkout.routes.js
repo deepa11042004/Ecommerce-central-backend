@@ -12,6 +12,9 @@ const router = express.Router();
  *   post:
  *     tags: [Checkout]
  *     summary: Create order and initialize Razorpay payment
+ *     description: |
+ *       Revalidates cart prices, stock, and optional coupon before creating order.
+ *       Coupon validation is always server-side and repeated at checkout for tamper safety.
  *     parameters:
  *       - $ref: '#/components/parameters/GuestIdentityHeader'
  *     requestBody:
@@ -20,6 +23,13 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/CheckoutRequest'
+ *           examples:
+ *             withCoupon:
+ *               value:
+ *                 shippingAddressId: 1
+ *                 billingAddressId: 1
+ *                 paymentMethod: razorpay
+ *                 couponCode: WELCOME10
  *     responses:
  *       201:
  *         description: Checkout created

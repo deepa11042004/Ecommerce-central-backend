@@ -27,6 +27,10 @@ const defineOrderModel = require('../../modules/order/models/order.model');
 const defineOrderItemModel = require('../../modules/order/models/orderItem.model');
 const definePaymentModel = require('../../modules/payment/models/payment.model');
 const defineHeroBannerModel = require('../../modules/heroBanner/models/heroBanner.model');
+const defineCouponModel = require('../../modules/coupon/models/coupon.model');
+const defineCouponProductModel = require('../../modules/coupon/models/couponProduct.model');
+const defineCouponCategoryModel = require('../../modules/coupon/models/couponCategory.model');
+const defineCouponUsageModel = require('../../modules/coupon/models/couponUsage.model');
 
 const db = {};
 
@@ -56,6 +60,10 @@ db.Order = defineOrderModel(sequelize, DataTypes);
 db.OrderItem = defineOrderItemModel(sequelize, DataTypes);
 db.Payment = definePaymentModel(sequelize, DataTypes);
 db.HeroBanner = defineHeroBannerModel(sequelize, DataTypes);
+db.Coupon = defineCouponModel(sequelize, DataTypes);
+db.CouponProduct = defineCouponProductModel(sequelize, DataTypes);
+db.CouponCategory = defineCouponCategoryModel(sequelize, DataTypes);
+db.CouponUsage = defineCouponUsageModel(sequelize, DataTypes);
 
 Object.values(db).forEach((model) => {
   if (typeof model.associate === 'function') {

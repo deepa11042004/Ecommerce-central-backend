@@ -55,6 +55,10 @@ const options = {
         description: 'Cart validation and order initialization endpoints',
       },
       {
+        name: 'Coupons',
+        description: 'Coupon management, validation, and discount application endpoints',
+      },
+      {
         name: 'Orders',
         description: 'Customer and guest order history endpoints',
       },
@@ -455,6 +459,267 @@ const options = {
             },
           },
         },
+        CouponTypeEnum: {
+          type: 'string',
+          enum: ['PERCENTAGE', 'FIXED_AMOUNT'],
+          example: 'PERCENTAGE',
+        },
+        CouponAdmin: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            code: { type: 'string', example: 'WELCOME10' },
+            title: { type: 'string', example: 'Welcome Offer' },
+            description: { type: 'string', nullable: true, example: '10 percent off on first order' },
+            couponType: { $ref: '#/components/schemas/CouponTypeEnum' },
+            discountValue: { type: 'number', format: 'float', example: 10 },
+            minimumOrderAmount: { type: 'number', format: 'float', example: 1000 },
+            maximumDiscountAmount: { type: 'number', format: 'float', nullable: true, example: 500 },
+            usageLimit: { type: 'integer', nullable: true, example: 1000 },
+            perUserUsageLimit: { type: 'integer', nullable: true, example: 1 },
+            usedCount: { type: 'integer', example: 45 },
+            startsAt: { type: 'string', format: 'date-time' },
+            expiresAt: { type: 'string', format: 'date-time' },
+            isActive: { type: 'boolean', example: true },
+            stackable: { type: 'boolean', example: false },
+            createdBy: { type: 'integer', nullable: true, example: 2 },
+            restrictedProductIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              example: [1, 2],
+            },
+            restrictedCategoryIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              example: [10],
+            },
+            creator: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'integer', example: 2 },
+                fullName: { type: 'string', example: 'Admin User' },
+                email: { type: 'string', example: 'admin@example.com' },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CouponAnalytics: {
+          type: 'object',
+          properties: {
+            totalUsages: { type: 'integer', example: 45 },
+            uniqueUsers: { type: 'integer', example: 37 },
+            totalDiscountAmount: { type: 'number', format: 'float', example: 1650 },
+          },
+        },
+        CouponDetail: {
+          allOf: [
+            { $ref: '#/components/schemas/CouponAdmin' },
+            {
+              type: 'object',
+              properties: {
+                analytics: {
+                  $ref: '#/components/schemas/CouponAnalytics',
+                },
+              },
+            },
+          ],
+        },
+        CouponCreateRequest: {
+          type: 'object',
+          required: ['code', 'title', 'couponType', 'discountValue', 'startsAt', 'expiresAt'],
+          properties: {
+            code: { type: 'string', example: 'WELCOME10' },
+            title: { type: 'string', example: 'Welcome Offer' },
+            description: { type: 'string', nullable: true, example: '10 percent off on first order' },
+            couponType: { $ref: '#/components/schemas/CouponTypeEnum' },
+            discountValue: { type: 'number', format: 'float', example: 10 },
+            minimumOrderAmount: { type: 'number', format: 'float', example: 1000 },
+            maximumDiscountAmount: { type: 'number', format: 'float', nullable: true, example: 500 },
+            usageLimit: { type: 'integer', nullable: true, example: 1000 },
+            perUserUsageLimit: { type: 'integer', nullable: true, example: 1 },
+            startsAt: { type: 'string', format: 'date-time', example: '2026-05-01T00:00:00.000Z' },
+            expiresAt: { type: 'string', format: 'date-time', example: '2026-06-01T00:00:00.000Z' },
+            isActive: { type: 'boolean', example: true },
+            stackable: { type: 'boolean', example: false },
+            productIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              example: [1, 2],
+            },
+            categoryIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              example: [10],
+            },
+          },
+        },
+        CouponUpdateRequest: {
+          type: 'object',
+          properties: {
+            code: { type: 'string', example: 'WELCOME15' },
+            title: { type: 'string', example: 'Welcome Offer Updated' },
+            description: { type: 'string', nullable: true, example: '15 percent off on first order' },
+            couponType: { $ref: '#/components/schemas/CouponTypeEnum' },
+            discountValue: { type: 'number', format: 'float', example: 15 },
+            minimumOrderAmount: { type: 'number', format: 'float', example: 1200 },
+            maximumDiscountAmount: { type: 'number', format: 'float', nullable: true, example: 700 },
+            usageLimit: { type: 'integer', nullable: true, example: 1500 },
+            perUserUsageLimit: { type: 'integer', nullable: true, example: 1 },
+            startsAt: { type: 'string', format: 'date-time', example: '2026-05-01T00:00:00.000Z' },
+            expiresAt: { type: 'string', format: 'date-time', example: '2026-06-15T00:00:00.000Z' },
+            isActive: { type: 'boolean', example: true },
+            stackable: { type: 'boolean', example: false },
+            productIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              example: [1, 2],
+            },
+            categoryIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              example: [10],
+            },
+          },
+        },
+        CouponToggleRequest: {
+          type: 'object',
+          required: ['isActive'],
+          properties: {
+            isActive: { type: 'boolean', example: false },
+          },
+        },
+        CouponSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Coupon fetched successfully' },
+            data: {
+              $ref: '#/components/schemas/CouponAdmin',
+            },
+          },
+        },
+        CouponDetailSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Coupon fetched successfully' },
+            data: {
+              $ref: '#/components/schemas/CouponDetail',
+            },
+          },
+        },
+        CouponListSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Coupons fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                items: {
+                  type: 'array',
+                  items: {
+                    $ref: '#/components/schemas/CouponAdmin',
+                  },
+                },
+                meta: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer', example: 1 },
+                    limit: { type: 'integer', example: 20 },
+                    totalItems: { type: 'integer', example: 45 },
+                    totalPages: { type: 'integer', example: 3 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        CouponDeleteSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Coupon deleted successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer', example: 1 },
+                deleted: { type: 'boolean', example: true },
+              },
+            },
+          },
+        },
+        CartApplyCouponRequest: {
+          type: 'object',
+          required: ['couponCode'],
+          properties: {
+            couponCode: { type: 'string', example: 'WELCOME10' },
+          },
+        },
+        CartCouponView: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            code: { type: 'string', example: 'WELCOME10' },
+            title: { type: 'string', example: 'Welcome Offer' },
+            type: { $ref: '#/components/schemas/CouponTypeEnum' },
+            discountValue: { type: 'number', format: 'float', example: 10 },
+            maximumDiscountAmount: { type: 'number', format: 'float', nullable: true, example: 500 },
+          },
+        },
+        CartCouponPricing: {
+          type: 'object',
+          properties: {
+            currency: { type: 'string', example: 'INR' },
+            subtotal: { type: 'number', format: 'float', example: 2000 },
+            eligibleSubtotal: { type: 'number', format: 'float', example: 2000 },
+            discount: { type: 'number', format: 'float', example: 200 },
+            shipping: { type: 'number', format: 'float', example: 0 },
+            tax: { type: 'number', format: 'float', example: 0 },
+            total: { type: 'number', format: 'float', example: 1800 },
+          },
+        },
+        CartApplyCouponSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Coupon validated successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                coupon: {
+                  $ref: '#/components/schemas/CartCouponView',
+                },
+                pricing: {
+                  $ref: '#/components/schemas/CartCouponPricing',
+                },
+              },
+            },
+          },
+        },
+        CartRemoveCouponSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Coupon removed successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                coupon: {
+                  type: 'object',
+                  nullable: true,
+                  example: null,
+                },
+                pricing: {
+                  $ref: '#/components/schemas/CartCouponPricing',
+                },
+              },
+            },
+          },
+        },
         WishlistItem: {
           type: 'object',
           properties: {
@@ -693,6 +958,7 @@ const options = {
             shippingAddressId: { type: 'integer', example: 11 },
             billingAddressId: { type: 'integer', example: 11 },
             paymentMethod: { type: 'string', enum: ['razorpay'], example: 'razorpay' },
+            couponCode: { type: 'string', nullable: true, example: 'WELCOME10' },
             notes: { type: 'string', nullable: true, example: 'Leave at front desk.' },
           },
         },
@@ -721,6 +987,18 @@ const options = {
                 amount: { type: 'integer', example: 250000 },
                 currency: { type: 'string', example: 'INR' },
                 key: { type: 'string', example: 'rzp_test_123456' },
+                coupon: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    id: { type: 'integer', example: 1 },
+                    code: { type: 'string', example: 'WELCOME10' },
+                    title: { type: 'string', example: 'Welcome Offer' },
+                    type: { type: 'string', enum: ['PERCENTAGE', 'FIXED_AMOUNT'], example: 'PERCENTAGE' },
+                    discountValue: { type: 'number', format: 'float', example: 10 },
+                    maximumDiscountAmount: { type: 'number', format: 'float', nullable: true, example: 500 },
+                  },
+                },
                 totals: {
                   $ref: '#/components/schemas/CheckoutTotals',
                 },
@@ -807,6 +1085,9 @@ const options = {
             taxAmount: { type: 'number', format: 'float', example: 0 },
             shippingAmount: { type: 'number', format: 'float', example: 0 },
             discountAmount: { type: 'number', format: 'float', example: 0 },
+            couponCodeSnapshot: { type: 'string', nullable: true, example: 'WELCOME10' },
+            couponDiscountSnapshot: { type: 'number', format: 'float', nullable: true, example: 120 },
+            couponTypeSnapshot: { type: 'string', nullable: true, enum: ['PERCENTAGE', 'FIXED_AMOUNT'], example: 'PERCENTAGE' },
             totalAmount: { type: 'number', format: 'float', example: 1200 },
             currency: { type: 'string', example: 'INR' },
             orderStatus: { type: 'string', example: 'CONFIRMED' },

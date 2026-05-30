@@ -4,6 +4,7 @@ const { sequelize } = require('../../../database/models');
 const { buildItemKey, normalizeCurrency, toInteger, toMoney } = require('../../../utils/shopping');
 const CartRepository = require('../repositories/cart.repository');
 const ProductCatalogRepository = require('../../product/repositories/productCatalog.repository');
+const CouponService = require('../../coupon/services/coupon.service');
 
 class CartService {
   static async getCart(actor) {
@@ -151,6 +152,18 @@ class CartService {
 
       return this.buildCartResponse(detailedCart, actor);
     });
+  }
+
+  static async applyCoupon(actor, payload) {
+    this.ensureActor(actor);
+
+    return CouponService.applyCouponOnCart(actor, payload.couponCode);
+  }
+
+  static async removeCoupon(actor) {
+    this.ensureActor(actor);
+
+    return CouponService.removeCouponFromCart(actor);
   }
 
   static async mergeGuestCartIntoUser({ userId, guestId }, options = {}) {

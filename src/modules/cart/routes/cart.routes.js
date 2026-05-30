@@ -9,6 +9,8 @@ const {
   updateCartItemSchema,
   cartItemParamsSchema,
   mergeCartSchema,
+  applyCouponSchema,
+  removeCouponSchema,
 } = require('../validators/cart.validator');
 
 const router = express.Router();
@@ -154,6 +156,57 @@ router.delete('/items/:id', resolveShoppingActor(), validate(cartItemParamsSchem
  *               $ref: '#/components/schemas/CartSuccessResponse'
  */
 router.delete('/clear', resolveShoppingActor(), validate(getCartSchema), controller.clear);
+
+/**
+ * @swagger
+ * /cart/apply-coupon:
+ *   post:
+ *     tags: [Cart, Coupons]
+ *     summary: Validate a coupon against current cart pricing
+ *     description: |
+ *       Validates coupon server-side and recalculates pricing with current catalog prices.
+ *       This endpoint does not persist coupon usage or lock totals for checkout.
+ *     parameters:
+ *       - $ref: '#/components/parameters/GuestIdentityHeader'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CartApplyCouponRequest'
+ *     responses:
+ *       200:
+ *         description: Coupon validated and pricing recalculated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CartApplyCouponSuccessResponse'
+ *       400:
+ *         description: Coupon invalid for current cart state
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post('/apply-coupon', resolveShoppingActor(), validate(applyCouponSchema), controller.applyCoupon);
+
+/**
+ * @swagger
+ * /cart/remove-coupon:
+ *   delete:
+ *     tags: [Cart, Coupons]
+ *     summary: Remove temporary coupon effect from cart pricing
+ *     parameters:
+ *       - $ref: '#/components/parameters/GuestIdentityHeader'
+ *     responses:
+ *       200:
+ *         description: Pricing recalculated without coupon discount
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CartRemoveCouponSuccessResponse'
+ */
+router.delete('/remove-coupon', resolveShoppingActor(), validate(removeCouponSchema), controller.removeCoupon);
 
 /**
  * @swagger

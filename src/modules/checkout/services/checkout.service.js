@@ -10,6 +10,7 @@ const OrderRepository = require('../../order/repositories/order.repository');
 const PaymentRepository = require('../../payment/repositories/payment.repository');
 const PaymentService = require('../../payment/services/payment.service');
 const AddressRepository = require('../../address/repositories/address.repository');
+const CouponValidationService = require('../../coupon/services/couponValidation.service');
 const {
   ORDER_STATUS,
   PAYMENT_STATUS,
@@ -33,7 +34,7 @@ class CheckoutService {
       throw ApiError.badRequest('Unsupported payment method');
     }
 
-    const { order, payment, totals } = await sequelize.transaction(async (transaction) => {
+    const { order, payment, totals, coupon } = await sequelize.transaction(async (transaction) => {
       const cart = await this.findCart(actor, { transaction });
 
       if (!cart || !cart.items?.length) {
@@ -44,7 +45,28 @@ class CheckoutService {
       const shippingAddress = await this.resolveAddress(actor, payload.shippingAddressId, { transaction });
 
       const selections = await this.resolveSelections(cart.items, { transaction });
-      const totals = this.calculateTotals(selections, cart.currency);
+      let couponValidation = null;
+      let totals = this.calculateTotals(selections, cart.currency);
+
+      if (payload.couponCode) {
+        couponValidation = await CouponValidationService.validateForSelections({
+          actor,
+          couponCode: payload.couponCode,
+          selections: selections.map((selection) => ({
+            productId: selection.product.id,
+            quantity: selection.quantity,
+            unitPrice: selection.unitPrice,
+          })),
+          currency: totals.currency,
+          transaction,
+          lockCoupon: true,
+        });
+
+        totals = this.calculateTotals(selections, cart.currency, {
+          discountAmount: couponValidation.pricing.discount,
+        });
+      }
+
       const orderNumber = await this.generateOrderNumber({ transaction });
 
       const order = await OrderRepository.create(
@@ -56,6 +78,9 @@ class CheckoutService {
           taxAmount: totals.taxAmount,
           shippingAmount: totals.shippingAmount,
           discountAmount: totals.discountAmount,
+          couponCodeSnapshot: couponValidation?.couponView?.code || null,
+          couponDiscountSnapshot: couponValidation?.pricing?.discount || null,
+          couponTypeSnapshot: couponValidation?.couponView?.type || null,
           totalAmount: totals.totalAmount,
           currency: totals.currency,
           orderStatus: ORDER_STATUS.PENDING_PAYMENT,
@@ -69,6 +94,16 @@ class CheckoutService {
       );
 
       await OrderRepository.createItems(order.id, this.buildOrderItemRows(selections), { transaction });
+
+      if (couponValidation?.coupon && totals.discountAmount > 0) {
+        await CouponValidationService.recordCouponUsage({
+          coupon: couponValidation.coupon,
+          actor,
+          orderId: order.id,
+          discountAmount: totals.discountAmount,
+          transaction,
+        });
+      }
 
       const payment = await PaymentRepository.create(
         {
@@ -88,7 +123,7 @@ class CheckoutService {
         includeAddresses: true,
       });
 
-      return { order: detailedOrder, payment, totals };
+      return { order: detailedOrder, payment, totals, coupon: couponValidation?.couponView || null };
     });
 
     try {
@@ -102,6 +137,7 @@ class CheckoutService {
         currency: razorpay.currency,
         key: razorpay.key,
         totals,
+        coupon,
       };
     } catch (error) {
       await PaymentService.markPaymentFailed(order, payment, { reason: error.message });
@@ -248,18 +284,18 @@ class CheckoutService {
     );
   }
 
-  static calculateTotals(selections, currency) {
+  static calculateTotals(selections, currency, { discountAmount = 0 } = {}) {
     const subtotal = selections.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
     const totals = {
       subtotal: toMoney(subtotal, 0),
       taxAmount: toMoney(0, 0),
       shippingAmount: toMoney(0, 0),
-      discountAmount: toMoney(0, 0),
+      discountAmount: toMoney(discountAmount, 0),
     };
 
     totals.totalAmount = toMoney(
-      totals.subtotal + totals.taxAmount + totals.shippingAmount - totals.discountAmount,
+      Math.max(totals.subtotal + totals.taxAmount + totals.shippingAmount - totals.discountAmount, 0),
       0
     );
 
