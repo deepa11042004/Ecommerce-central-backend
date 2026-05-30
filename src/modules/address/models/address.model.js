@@ -57,10 +57,26 @@ const defineAddressModel = (sequelize, DataTypes) => {
         type: DataTypes.STRING(190),
         allowNull: true,
       },
+      label: {
+        type: DataTypes.STRING(80),
+        allowNull: true,
+      },
       type: {
         type: DataTypes.ENUM('shipping', 'billing', 'both'),
         allowNull: false,
         defaultValue: 'shipping',
+      },
+      isDefaultShipping: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'is_default_shipping',
+      },
+      isDefaultBilling: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'is_default_billing',
       },
     },
     {
@@ -75,6 +91,12 @@ const defineAddressModel = (sequelize, DataTypes) => {
         },
         {
           fields: ['type'],
+        },
+        {
+          fields: ['is_default_shipping'],
+        },
+        {
+          fields: ['is_default_billing'],
         },
       ],
     }

@@ -30,7 +30,7 @@ class AddressRepository {
     return Address.findOne({ where, transaction });
   }
 
-  static listByActor(actor, { transaction } = {}) {
+  static buildActorWhere(actor, { excludeAddressId } = {}) {
     const where = {};
 
     if (actor?.userId) {
@@ -39,9 +39,32 @@ class AddressRepository {
       where.guestId = actor.guestId;
     }
 
+    if (excludeAddressId) {
+      where.id = { [Op.ne]: excludeAddressId };
+    }
+
+    return where;
+  }
+
+  static clearDefaultFlagsForActor(actor, flags, { excludeAddressId, transaction } = {}) {
+    const where = this.buildActorWhere(actor, { excludeAddressId });
+
+    return Address.update(flags, {
+      where,
+      transaction,
+    });
+  }
+
+  static listByActor(actor, { transaction } = {}) {
+    const where = this.buildActorWhere(actor);
+
     return Address.findAll({
       where,
-      order: [['createdAt', 'DESC']],
+      order: [
+        ['isDefaultShipping', 'DESC'],
+        ['isDefaultBilling', 'DESC'],
+        ['createdAt', 'DESC'],
+      ],
       transaction,
     });
   }

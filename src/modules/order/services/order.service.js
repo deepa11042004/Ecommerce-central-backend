@@ -2,12 +2,11 @@ const ApiError = require('../../../core/errors/ApiError');
 const { parsePagination, buildPaginationMeta } = require('../../../utils/pagination');
 const { parseSort } = require('../../../utils/filtering');
 const { toMoney } = require('../../../utils/shopping');
-const { isOrderStatusTransitionAllowed } = require('../../../utils/orderStatus');
 const {
   ORDER_STATUS,
-  PAYMENT_STATUS,
 } = require('../../../constants/order');
 const OrderRepository = require('../repositories/order.repository');
+const OrderLifecycleService = require('./orderLifecycle.service');
 const PaymentService = require('../../payment/services/payment.service');
 
 const DEFAULT_SORT = {
@@ -65,13 +64,45 @@ class OrderService {
       includeItems: true,
       includeAddresses: true,
       includePayments: true,
+      includeStatusHistory: true,
     });
 
     if (!order) {
       throw ApiError.notFound('Order not found');
     }
 
-    return this.serialize(order, { includeItems: true, includeAddresses: true, includePayments: true });
+    return this.serialize(order, {
+      includeItems: true,
+      includeAddresses: true,
+      includePayments: true,
+      includeStatusHistory: true,
+    });
+  }
+
+  static async getTimelineForActor(actor, id) {
+    this.ensureActor(actor);
+
+    const order = await OrderRepository.findByIdForActor(id, actor, {
+      includeStatusHistory: true,
+    });
+
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    return (order.statusHistory || []).map((entry) => this.serializeStatusHistory(entry));
+  }
+
+  static async getTimelineById(id) {
+    const order = await OrderRepository.findById(id, {
+      includeStatusHistory: true,
+    });
+
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    return (order.statusHistory || []).map((entry) => this.serializeStatusHistory(entry));
   }
 
   static async listItemsForActor(actor, id) {
@@ -158,41 +189,119 @@ class OrderService {
   }
 
   static async updateStatusByAdmin(id, payload) {
-    const order = await OrderRepository.findById(id);
+    const order = await OrderRepository.findById(id, {
+      includeItems: true,
+      includeAddresses: true,
+      includePayments: true,
+      includeStatusHistory: true,
+    });
 
     if (!order) {
       throw ApiError.notFound('Order not found');
     }
 
-    const nextStatus = payload.status;
-
-    if (!isOrderStatusTransitionAllowed(order.orderStatus, nextStatus)) {
-      throw ApiError.badRequest('Order status transition is not allowed');
-    }
-
-    const nextPayload = {
-      orderStatus: nextStatus,
-    };
-
-    if (nextStatus === ORDER_STATUS.REFUNDED) {
-      nextPayload.paymentStatus = PAYMENT_STATUS.REFUNDED;
-    }
-
-    if (nextStatus === ORDER_STATUS.FAILED) {
-      nextPayload.paymentStatus = PAYMENT_STATUS.FAILED;
-    }
-
-    await OrderRepository.update(order, nextPayload);
-
-    const detailedOrder = await OrderRepository.findById(order.id, {
-      includeItems: true,
-      includeAddresses: true,
+    const detailedOrder = await OrderLifecycleService.transition(order, payload.status, {
+      actor: payload.changedByUserId ? { userId: payload.changedByUserId } : null,
+      reason: payload.reason,
+      notes: payload.notes,
     });
 
-    return this.serialize(detailedOrder, { includeItems: true, includeAddresses: true });
+    return this.serialize(detailedOrder, {
+      includeItems: true,
+      includeAddresses: true,
+      includePayments: true,
+      includeStatusHistory: true,
+    });
   }
 
-  static serialize(order, { includeItems = false, includeAddresses = false, includePayments = false, includeUser = false } = {}) {
+  static async cancelForActor(actor, id, payload = {}) {
+    const order = await OrderRepository.findByIdForActor(id, actor, {
+      includeItems: true,
+      includeAddresses: true,
+      includePayments: true,
+      includeStatusHistory: true,
+    });
+
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    return this.serialize(
+      await OrderLifecycleService.transition(order, ORDER_STATUS.CANCELLED, {
+        actor,
+        reason: payload.reason,
+        notes: payload.notes,
+      }),
+      {
+        includeItems: true,
+        includeAddresses: true,
+        includePayments: true,
+        includeStatusHistory: true,
+      }
+    );
+  }
+
+  static async requestReturnForActor(actor, id, payload = {}) {
+    const order = await OrderRepository.findByIdForActor(id, actor, {
+      includeItems: true,
+      includeAddresses: true,
+      includePayments: true,
+      includeStatusHistory: true,
+    });
+
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    return this.serialize(
+      await OrderLifecycleService.transition(order, ORDER_STATUS.RETURN_REQUESTED, {
+        actor,
+        reason: payload.reason,
+        notes: payload.notes,
+      }),
+      {
+        includeItems: true,
+        includeAddresses: true,
+        includePayments: true,
+        includeStatusHistory: true,
+      }
+    );
+  }
+
+  static async requestRefundForActor(actor, id, payload = {}) {
+    const order = await OrderRepository.findByIdForActor(id, actor, {
+      includeItems: true,
+      includeAddresses: true,
+      includePayments: true,
+      includeStatusHistory: true,
+    });
+
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    return this.serialize(
+      await OrderLifecycleService.transition(order, ORDER_STATUS.REFUND_PENDING, {
+        actor,
+        reason: payload.reason,
+        notes: payload.notes,
+      }),
+      {
+        includeItems: true,
+        includeAddresses: true,
+        includePayments: true,
+        includeStatusHistory: true,
+      }
+    );
+  }
+
+  static serialize(order, {
+    includeItems = false,
+    includeAddresses = false,
+    includePayments = false,
+    includeUser = false,
+    includeStatusHistory = false,
+  } = {}) {
     if (!order) {
       return null;
     }
@@ -222,6 +331,7 @@ class OrderService {
       billingAddress: includeAddresses ? this.serializeAddress(order.billingAddress) : undefined,
       shippingAddress: includeAddresses ? this.serializeAddress(order.shippingAddress) : undefined,
       user: includeUser ? this.serializeUser(order.user) : undefined,
+      statusHistory: includeStatusHistory ? (order.statusHistory || []).map((entry) => this.serializeStatusHistory(entry)) : undefined,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
     };
@@ -284,7 +394,10 @@ class OrderService {
       country: address.country,
       postalCode: address.postalCode,
       landmark: address.landmark,
+      label: address.label,
       type: address.type,
+      isDefaultShipping: Boolean(address.isDefaultShipping),
+      isDefaultBilling: Boolean(address.isDefaultBilling),
     };
   }
 
@@ -297,6 +410,23 @@ class OrderService {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
+    };
+  }
+
+  static serializeStatusHistory(entry) {
+    if (!entry) {
+      return null;
+    }
+
+    return {
+      id: entry.id,
+      orderId: entry.orderId,
+      oldStatus: entry.oldStatus,
+      newStatus: entry.newStatus,
+      changedBy: entry.changedBy,
+      reason: entry.reason,
+      notes: entry.notes,
+      createdAt: entry.createdAt,
     };
   }
 }

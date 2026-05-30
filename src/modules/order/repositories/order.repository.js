@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Order, OrderItem, Payment, Address, User } = require('../../../database/models');
+const { Order, OrderItem, Payment, Address, User, OrderStatusHistory } = require('../../../database/models');
 
 const ORDER_ITEM_ATTRIBUTES = [
   'id',
@@ -28,6 +28,17 @@ const PAYMENT_ATTRIBUTES = [
   'paymentStatus',
   'createdAt',
   'updatedAt',
+];
+
+const ORDER_STATUS_HISTORY_ATTRIBUTES = [
+  'id',
+  'orderId',
+  'oldStatus',
+  'newStatus',
+  'changedBy',
+  'reason',
+  'notes',
+  'createdAt',
 ];
 
 const ORDER_ATTRIBUTES = [
@@ -71,7 +82,13 @@ const ADDRESS_ATTRIBUTES = [
 const USER_ATTRIBUTES = ['id', 'fullName', 'email'];
 
 class OrderRepository {
-  static buildInclude({ includeItems = false, includePayments = false, includeAddresses = false, includeUser = false } = {}) {
+  static buildInclude({
+    includeItems = false,
+    includePayments = false,
+    includeAddresses = false,
+    includeUser = false,
+    includeStatusHistory = false,
+  } = {}) {
     const include = [];
 
     if (includeItems) {
@@ -111,6 +128,14 @@ class OrderRepository {
       });
     }
 
+    if (includeStatusHistory) {
+      include.push({
+        model: OrderStatusHistory,
+        as: 'statusHistory',
+        attributes: ORDER_STATUS_HISTORY_ATTRIBUTES,
+      });
+    }
+
     return include;
   }
 
@@ -120,10 +145,17 @@ class OrderRepository {
     includePayments = false,
     includeAddresses = false,
     includeUser = false,
+    includeStatusHistory = false,
     lock,
   } = {}) {
     const options = { transaction, attributes: ORDER_ATTRIBUTES };
-    const include = this.buildInclude({ includeItems, includePayments, includeAddresses, includeUser });
+    const include = this.buildInclude({
+      includeItems,
+      includePayments,
+      includeAddresses,
+      includeUser,
+      includeStatusHistory,
+    });
 
     if (include.length) {
       options.include = include;

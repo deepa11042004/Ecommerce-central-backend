@@ -152,6 +152,11 @@ const defineOrderModel = (sequelize, DataTypes) => {
       as: 'payments',
     });
 
+    Order.hasMany(models.OrderStatusHistory, {
+      foreignKey: 'orderId',
+      as: 'statusHistory',
+    });
+
     Order.hasMany(models.CouponUsage, {
       foreignKey: 'orderId',
       as: 'couponUsages',

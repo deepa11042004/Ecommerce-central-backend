@@ -42,9 +42,53 @@ const retryPayment = asyncHandler(async (req, res) => {
   });
 });
 
+const timeline = asyncHandler(async (req, res) => {
+  const data = await OrderService.getTimelineForActor(req.actor, req.params.id);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Order timeline fetched successfully',
+    data,
+  });
+});
+
+const cancel = asyncHandler(async (req, res) => {
+  const data = await OrderService.cancelForActor(req.actor, req.params.id, req.body);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Order cancelled successfully',
+    data,
+  });
+});
+
+const requestReturn = asyncHandler(async (req, res) => {
+  const data = await OrderService.requestReturnForActor(req.actor, req.params.id, req.body);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Return request submitted successfully',
+    data,
+  });
+});
+
+const requestRefund = asyncHandler(async (req, res) => {
+  const data = await OrderService.requestRefundForActor(req.actor, req.params.id, req.body);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Refund request submitted successfully',
+    data,
+  });
+});
+
 module.exports = {
   list,
   getById,
   listItems,
   retryPayment,
+  timeline,
+  cancel,
+  requestReturn,
+  requestRefund,
 };

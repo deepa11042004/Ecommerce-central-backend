@@ -29,6 +29,19 @@ const orderParamsSchema = Joi.object({
 const updateOrderStatusSchema = Joi.object({
   body: Joi.object({
     status: Joi.string().valid(...ORDER_STATUS_LIST).required(),
+    reason: Joi.string().trim().max(255).optional().allow('', null),
+    notes: Joi.string().trim().max(2000).optional().allow('', null),
+  }).required(),
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }).required(),
+  query: Joi.object({}).optional(),
+});
+
+const orderActionSchema = Joi.object({
+  body: Joi.object({
+    reason: Joi.string().trim().max(255).optional().allow('', null),
+    notes: Joi.string().trim().max(2000).optional().allow('', null),
   }).required(),
   params: Joi.object({
     id: Joi.number().integer().positive().required(),
@@ -40,4 +53,5 @@ module.exports = {
   listOrdersSchema,
   orderParamsSchema,
   updateOrderStatusSchema,
+  orderActionSchema,
 };

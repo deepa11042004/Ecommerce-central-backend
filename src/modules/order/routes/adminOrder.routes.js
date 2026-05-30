@@ -7,6 +7,7 @@ const controller = require('../controllers/adminOrder.controller');
 const {
   listOrdersSchema,
   updateOrderStatusSchema,
+  orderParamsSchema,
 } = require('../validators/order.validator');
 
 const router = express.Router();
@@ -58,5 +59,16 @@ router.get('/', auth(), can(PERMISSIONS.ORDER_READ), validate(listOrdersSchema),
  *               $ref: '#/components/schemas/OrderSuccessResponse'
  */
 router.patch('/:id/status', auth(), can(PERMISSIONS.ORDER_UPDATE), validate(updateOrderStatusSchema), controller.updateStatus);
+
+/**
+ * @swagger
+ * /admin/orders/{id}/timeline:
+ *   get:
+ *     tags: [Admin Orders]
+ *     summary: Get order timeline (admin)
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/:id/timeline', auth(), can(PERMISSIONS.ORDER_READ), validate(orderParamsSchema), controller.timeline);
 
 module.exports = router;

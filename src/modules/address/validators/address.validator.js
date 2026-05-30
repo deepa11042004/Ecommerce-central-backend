@@ -10,7 +10,10 @@ const addressFields = {
   country: Joi.string().trim().min(2).max(120),
   postalCode: Joi.string().trim().min(2).max(30),
   landmark: Joi.string().trim().max(190).allow(null, ''),
+  label: Joi.string().trim().max(80).allow(null, ''),
   type: Joi.string().valid('shipping', 'billing', 'both'),
+  isDefaultShipping: Joi.boolean(),
+  isDefaultBilling: Joi.boolean(),
 };
 
 const createAddressSchema = Joi.object({
@@ -24,7 +27,10 @@ const createAddressSchema = Joi.object({
     country: addressFields.country.required(),
     postalCode: addressFields.postalCode.required(),
     landmark: addressFields.landmark.optional(),
+    label: addressFields.label.optional(),
     type: addressFields.type.default('shipping'),
+    isDefaultShipping: addressFields.isDefaultShipping.default(false),
+    isDefaultBilling: addressFields.isDefaultBilling.default(false),
   }).required(),
   params: Joi.object({}).optional(),
   query: Joi.object({}).optional(),
@@ -41,7 +47,10 @@ const updateAddressSchema = Joi.object({
     country: addressFields.country.optional(),
     postalCode: addressFields.postalCode.optional(),
     landmark: addressFields.landmark.optional(),
+    label: addressFields.label.optional(),
     type: addressFields.type.optional(),
+    isDefaultShipping: addressFields.isDefaultShipping.optional(),
+    isDefaultBilling: addressFields.isDefaultBilling.optional(),
   }).min(1).required(),
   params: Joi.object({
     id: Joi.number().integer().positive().required(),

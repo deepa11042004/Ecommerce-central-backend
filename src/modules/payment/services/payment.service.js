@@ -2,7 +2,6 @@ const ApiError = require('../../../core/errors/ApiError');
 const env = require('../../../config/env');
 const { sequelize } = require('../../../database/models');
 const { toInteger } = require('../../../utils/shopping');
-const { isOrderStatusTransitionAllowed } = require('../../../utils/orderStatus');
 const {
   ORDER_STATUS,
   PAYMENT_STATUS,
@@ -10,6 +9,7 @@ const {
   PAYMENT_PROVIDERS,
 } = require('../../../constants/order');
 const OrderRepository = require('../../order/repositories/order.repository');
+const OrderLifecycleService = require('../../order/services/orderLifecycle.service');
 const PaymentRepository = require('../repositories/payment.repository');
 const CartRepository = require('../../cart/repositories/cart.repository');
 const ProductCatalogRepository = require('../../product/repositories/productCatalog.repository');
@@ -78,13 +78,15 @@ class PaymentService {
   }
 
   static async markPaymentFailed(order, payment, { reason } = {}) {
-    const payload = {
+    await PaymentRepository.update(payment, {
       paymentStatus: PAYMENT_STATUS.FAILED,
       rawResponseJson: reason ? { error: reason } : payment.rawResponseJson,
-    };
+    });
 
-    await PaymentRepository.update(payment, payload);
-    await OrderRepository.update(order, { paymentStatus: PAYMENT_STATUS.FAILED });
+    await OrderLifecycleService.transition(order, ORDER_STATUS.FAILED, {
+      actor: { userId: null },
+      reason: reason || null,
+    });
   }
 
   static async createRetryPayment(order) {
@@ -153,7 +155,10 @@ class PaymentService {
         paymentStatus: PAYMENT_STATUS.FAILED,
         rawResponseJson: payload,
       });
-      await OrderRepository.update(order, { paymentStatus: PAYMENT_STATUS.FAILED });
+      await OrderLifecycleService.transition(order, ORDER_STATUS.FAILED, {
+        actor: actor ? { userId: actor.userId || null, guestId: actor.guestId || null } : { userId: null },
+        reason: 'Payment verification failed',
+      });
       throw ApiError.badRequest('Payment verification failed');
     }
 
@@ -163,6 +168,8 @@ class PaymentService {
         lock: transaction.LOCK.UPDATE,
         includeItems: true,
         includeAddresses: true,
+        includePayments: true,
+        includeStatusHistory: true,
       });
       const lockedPayment = await PaymentRepository.findById(payment.id, {
         transaction,
@@ -249,10 +256,6 @@ class PaymentService {
       return { received: true, alreadyConfirmed: true };
     }
 
-    if (payment.paymentStatus === PAYMENT_STATUS.SUCCESS) {
-      return { received: true, alreadyConfirmed: true };
-    }
-
     return sequelize.transaction(async (transaction) => {
       const lockedPayment = await PaymentRepository.findById(payment.id, {
         transaction,
@@ -263,6 +266,8 @@ class PaymentService {
         lock: transaction.LOCK.UPDATE,
         includeItems: true,
         includeAddresses: true,
+        includePayments: true,
+        includeStatusHistory: true,
       });
 
       if (!lockedPayment || !order) {
@@ -315,7 +320,10 @@ class PaymentService {
     const order = await OrderRepository.findById(payment.orderId);
 
     if (order && order.paymentStatus !== PAYMENT_STATUS.SUCCESS) {
-      await OrderRepository.update(order, { paymentStatus: PAYMENT_STATUS.FAILED });
+      await OrderLifecycleService.transition(order, ORDER_STATUS.FAILED, {
+        actor: { userId: null },
+        reason: 'Payment failed webhook received',
+      });
     }
 
     return { received: true };
@@ -339,12 +347,17 @@ class PaymentService {
       rawResponseJson: payload,
     });
 
-    const order = await OrderRepository.findById(payment.orderId);
+    const order = await OrderRepository.findById(payment.orderId, {
+      includeItems: true,
+      includeAddresses: true,
+      includePayments: true,
+      includeStatusHistory: true,
+    });
 
-    if (order && isOrderStatusTransitionAllowed(order.orderStatus, ORDER_STATUS.REFUNDED)) {
-      await OrderRepository.update(order, {
-        orderStatus: ORDER_STATUS.REFUNDED,
-        paymentStatus: PAYMENT_STATUS.REFUNDED,
+    if (order) {
+      await OrderLifecycleService.transition(order, ORDER_STATUS.REFUNDED, {
+        actor: { userId: null },
+        reason: 'Refund webhook received',
       });
     }
 
@@ -363,22 +376,11 @@ class PaymentService {
     await this.deductInventory(order.items, { transaction });
     await this.clearCartForOrder(order, { transaction });
 
-    const nextStatus = ORDER_STATUS.CONFIRMED;
-
-    if (!isOrderStatusTransitionAllowed(order.orderStatus, nextStatus)) {
-      throw ApiError.badRequest('Order status transition is not allowed');
-    }
-
-    await OrderRepository.update(
-      order,
-      {
-        orderStatus: nextStatus,
-        paymentStatus: PAYMENT_STATUS.SUCCESS,
-      },
-      { transaction }
-    );
-
-    return order;
+    return OrderLifecycleService.transition(order, ORDER_STATUS.CONFIRMED, {
+      actor: { userId: null },
+      reason: 'Payment captured and order fulfilled',
+      transaction,
+    });
   }
 
   static async deductInventory(items, { transaction } = {}) {
