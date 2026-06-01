@@ -12,6 +12,17 @@ const list = asyncHandler(async (req, res) => {
   });
 });
 
+const getProductsBySlug = asyncHandler(async (req, res) => {
+  const data = await BrandService.getProductsBySlug(req.params.slug, req.query);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Brand products fetched successfully',
+    data,
+  });
+});
+
 module.exports = {
   list,
+  getProductsBySlug,
 };

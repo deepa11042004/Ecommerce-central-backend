@@ -4,7 +4,7 @@ const auth = require('../../../middleware/auth.middleware');
 const can = require('../../../middleware/permission.middleware');
 const validate = require('../../../middleware/validate.middleware');
 const { PERMISSIONS } = require('../../../constants/permissions');
-const { categoryTreeSchema } = require('../validators/product.validator');
+const { categoryTreeSchema, categoryProductsSchema } = require('../validators/product.validator');
 
 const router = express.Router();
 
@@ -42,5 +42,53 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/tree', auth(), can(PERMISSIONS.PRODUCT_READ), validate(categoryTreeSchema), controller.getTree);
+
+/**
+ * @swagger
+ * /categories/{slug}/products:
+ *   get:
+ *     tags: [Categories, Products]
+ *     summary: Fetch products by category slug
+ *     description: |
+ *       Category storefront listing endpoint with full catalog filtering support.
+ *       Supports includeChildren for nested category discovery.
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: laptops
+ *       - in: query
+ *         name: includeChildren
+ *         schema:
+ *           type: boolean
+ *         example: true
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: attribute
+ *         schema:
+ *           oneOf:
+ *             - type: string
+ *             - type: array
+ *               items:
+ *                 type: string
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [relevance, price_asc, price_desc, newest, oldest, name_asc, name_desc, discount_desc]
+ *     responses:
+ *       200:
+ *         description: Category products fetched
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductListSuccessResponse'
+ */
+router.get('/:slug/products', validate(categoryProductsSchema), controller.getProductsBySlug);
 
 module.exports = router;

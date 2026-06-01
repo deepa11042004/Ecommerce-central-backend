@@ -12,6 +12,17 @@ const getTree = asyncHandler(async (req, res) => {
   });
 });
 
+const getProductsBySlug = asyncHandler(async (req, res) => {
+  const data = await CategoryService.getProductsBySlug(req.params.slug, req.query);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Category products fetched successfully',
+    data,
+  });
+});
+
 module.exports = {
   getTree,
+  getProductsBySlug,
 };

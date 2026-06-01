@@ -6,11 +6,12 @@ const { routes: orderRoutes, adminRoutes: adminOrderRoutes } = require('../modul
 const { routes: paymentRoutes } = require('../modules/payment');
 const { routes: addressRoutes } = require('../modules/address');
 const { routes: mediaRoutes } = require('../modules/media');
-const { routes: productRoutes, categoryRoutes, brandRoutes } = require('../modules/product');
+const { routes: productRoutes, categoryRoutes, brandRoutes, searchRoutes } = require('../modules/product');
 const { routes: rbacRoutes } = require('../modules/rbac');
 const { routes: wishlistRoutes } = require('../modules/wishlist');
 const { routes: heroBannerRoutes } = require('../modules/heroBanner');
 const { adminRoutes: adminCouponRoutes } = require('../modules/coupon');
+const { adminRoutes: adminInventoryRoutes } = require('../modules/inventory');
 
 const router = express.Router();
 
@@ -48,9 +49,11 @@ router.use('/media', mediaRoutes);
 router.use('/products', productRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/brands', brandRoutes);
+router.use('/search', searchRoutes);
 router.use('/rbac', rbacRoutes);
 router.use('/wishlist', wishlistRoutes);
 router.use('/hero-banners', heroBannerRoutes);
 router.use('/admin/coupons', adminCouponRoutes);
+router.use('/admin/inventory', adminInventoryRoutes);
 
 module.exports = router;

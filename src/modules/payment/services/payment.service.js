@@ -1,7 +1,6 @@
 const ApiError = require('../../../core/errors/ApiError');
 const env = require('../../../config/env');
 const { sequelize } = require('../../../database/models');
-const { toInteger } = require('../../../utils/shopping');
 const {
   ORDER_STATUS,
   PAYMENT_STATUS,
@@ -10,10 +9,9 @@ const {
 } = require('../../../constants/order');
 const OrderRepository = require('../../order/repositories/order.repository');
 const OrderLifecycleService = require('../../order/services/orderLifecycle.service');
+const InventoryService = require('../../inventory/services/inventory.service');
 const PaymentRepository = require('../repositories/payment.repository');
 const CartRepository = require('../../cart/repositories/cart.repository');
-const ProductCatalogRepository = require('../../product/repositories/productCatalog.repository');
-const InventoryRepository = require('../../product/repositories/inventory.repository');
 const RazorpayService = require('./razorpay.service');
 const { buildItemKey, normalizeCurrency } = require('../../../utils/shopping');
 
@@ -373,7 +371,19 @@ class PaymentService {
       return order;
     }
 
-    await this.deductInventory(order.items, { transaction });
+    await InventoryService.commitReservedStock({
+      orderId: order.id,
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      reason: 'Payment captured and inventory committed',
+      fallbackItems: order.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+      })),
+      transaction,
+    });
+
     await this.clearCartForOrder(order, { transaction });
 
     return OrderLifecycleService.transition(order, ORDER_STATUS.CONFIRMED, {
@@ -381,66 +391,6 @@ class PaymentService {
       reason: 'Payment captured and order fulfilled',
       transaction,
     });
-  }
-
-  static async deductInventory(items, { transaction } = {}) {
-    for (const item of items) {
-      const quantity = toInteger(item.quantity, 0);
-
-      if (quantity <= 0) {
-        throw ApiError.badRequest('Invalid order quantity');
-      }
-
-      if (item.variantId) {
-        const variant = await ProductCatalogRepository.findVariantById(item.variantId, { transaction });
-
-        if (!variant || !variant.product) {
-          throw ApiError.badRequest('Variant is unavailable for fulfillment');
-        }
-
-        if (variant.status !== 'active' || variant.product.status !== 'active') {
-          throw ApiError.badRequest('Variant is inactive');
-        }
-
-        const inventory = await InventoryRepository.findInventoryByVariantIdForUpdate(item.variantId, { transaction });
-
-        if (!inventory) {
-          throw ApiError.badRequest('Inventory record is missing');
-        }
-
-        const available = Math.max(
-          toInteger(inventory.quantity, 0) - toInteger(inventory.reservedQuantity, 0),
-          0
-        );
-
-        if (!inventory.allowBackorder && quantity > available) {
-          throw ApiError.badRequest('Insufficient stock for order fulfillment');
-        }
-
-        const nextQuantity = toInteger(inventory.quantity, 0) - quantity;
-
-        await InventoryRepository.updateInventoryQuantity(inventory, nextQuantity, { transaction });
-        continue;
-      }
-
-      const product = await InventoryRepository.findProductByIdForUpdate(item.productId, { transaction });
-
-      if (!product) {
-        throw ApiError.badRequest('Product is unavailable for fulfillment');
-      }
-
-      if (product.status !== 'active') {
-        throw ApiError.badRequest('Product is inactive');
-      }
-
-      const currentStock = toInteger(product.stock, 0);
-
-      if (quantity > currentStock) {
-        throw ApiError.badRequest('Insufficient stock for order fulfillment');
-      }
-
-      await InventoryRepository.updateProductStock(product, currentStock - quantity, { transaction });
-    }
   }
 
   static async clearCartForOrder(order, { transaction } = {}) {

@@ -154,6 +154,11 @@ const defineProductModel = (sequelize, DataTypes) => {
       as: 'variants',
     });
 
+    Product.hasOne(models.Inventory, {
+      foreignKey: 'productId',
+      as: 'inventory',
+    });
+
     Product.hasMany(models.ProductMedia, {
       foreignKey: 'productId',
       as: 'media',

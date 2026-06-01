@@ -14,6 +14,7 @@ const {
   previewVariantCombinationsSchema,
   saveProductVariantsSchema,
   resolveVariantSchema,
+  relatedProductsSchema,
 } = require('../validators/product.validator');
 
 const router = express.Router();
@@ -70,6 +71,41 @@ router.post('/uploads', auth(), can(PERMISSIONS.PRODUCT_CREATE), singleImageUplo
  *           type: string
  *         example: electronics
  *       - in: query
+ *         name: includeChildren
+ *         schema:
+ *           type: boolean
+ *         description: Include nested subcategory products when category is provided.
+ *         example: true
+ *       - in: query
+ *         name: brand
+ *         schema:
+ *           type: string
+ *         description: Brand slug filter (for example dell).
+ *         example: dell
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         example: 20000
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         example: 50000
+ *       - in: query
+ *         name: availability
+ *         schema:
+ *           type: string
+ *           enum: [all, in_stock, out_of_stock]
+ *         example: in_stock
+ *       - in: query
+ *         name: discounted
+ *         schema:
+ *           type: boolean
+ *         example: true
+ *       - in: query
  *         name: attribute
  *         schema:
  *           oneOf:
@@ -77,14 +113,21 @@ router.post('/uploads', auth(), can(PERMISSIONS.PRODUCT_CREATE), singleImageUplo
  *             - type: array
  *               items:
  *                 type: string
- *         description: Dynamic filter using attribute:value format. Can be repeated.
- *         example: color:red
+ *         description: Dynamic filter using attribute:value1,value2 format. Can be repeated.
+ *         example: color:black,white
  *       - in: query
  *         name: sort
  *         schema:
  *           type: string
- *         description: price_desc, stock_asc, title_asc, createdAt_desc
+ *           enum: [relevance, price_asc, price_desc, newest, oldest, name_asc, name_desc, discount_desc, popular, rating]
+ *         description: Relevance works only when search is present.
  *         example: price_desc
+ *       - in: query
+ *         name: includeFacets
+ *         schema:
+ *           type: boolean
+ *         description: Set false to skip facet metadata for ultra-low latency requests.
+ *         example: true
  *     responses:
  *       200:
  *         description: Product list
@@ -110,6 +153,7 @@ router.get('/', validate(listProductsSchema), controller.findAll);
  *     description: |
  *       Access: developer, super_admin, admin, customer.
  *       Behavior is identical to GET /products but exposed as explicit search endpoint.
+ *       Supports relevance scoring, faceted metadata, dynamic attributes, and variant-aware filters.
  *       Required permission: product.read
  *     security:
  *       - bearerAuth: []
@@ -129,6 +173,50 @@ router.get('/', validate(listProductsSchema), controller.findAll);
  *         schema:
  *           type: string
  *         example: books
+ *       - in: query
+ *         name: includeChildren
+ *         schema:
+ *           type: boolean
+ *         example: true
+ *       - in: query
+ *         name: brand
+ *         schema:
+ *           type: string
+ *         example: dell
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         example: 20000
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         example: 50000
+ *       - in: query
+ *         name: availability
+ *         schema:
+ *           type: string
+ *           enum: [all, in_stock, out_of_stock]
+ *         example: in_stock
+ *       - in: query
+ *         name: discounted
+ *         schema:
+ *           type: boolean
+ *         example: true
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [relevance, price_asc, price_desc, newest, oldest, name_asc, name_desc, discount_desc, popular, rating]
+ *         example: relevance
+ *       - in: query
+ *         name: includeFacets
+ *         schema:
+ *           type: boolean
+ *         example: true
  *     responses:
  *       200:
  *         description: Search result
@@ -424,6 +512,38 @@ router.post(
   validate(resolveVariantSchema),
   controller.resolveVariant
 );
+
+/**
+ * @swagger
+ * /products/{id}/related:
+ *   get:
+ *     tags: [Products]
+ *     summary: Fetch related product recommendations
+ *     description: |
+ *       Rule-based related product engine.
+ *       Ranking priority: same category, same brand, shared dynamic attributes, then popular fallback.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 24
+ *         example: 12
+ *     responses:
+ *       200:
+ *         description: Related products fetched
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductRelatedSuccessResponse'
+ */
+router.get('/:id/related', validate(relatedProductsSchema), controller.related);
 
 /**
  * @swagger

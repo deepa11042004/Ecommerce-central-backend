@@ -89,6 +89,16 @@ const search = asyncHandler(async (req, res) => {
   });
 });
 
+const related = asyncHandler(async (req, res) => {
+  const data = await ProductService.related(req.params.id, req.query);
+
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Related products fetched successfully',
+    data,
+  });
+});
+
 const findOne = asyncHandler(async (req, res) => {
   const product = await ProductService.getById(req.params.id);
 
@@ -128,6 +138,7 @@ module.exports = {
   resolveVariant,
   findAll,
   search,
+  related,
   findOne,
   update,
   remove,

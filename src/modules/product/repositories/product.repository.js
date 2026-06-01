@@ -428,11 +428,11 @@ class ProductRepository {
             literal(`(
               SELECT pv.id
               FROM product_variants pv
-              LEFT JOIN inventory inv ON inv.variant_id = pv.id
+              LEFT JOIN inventories inv ON inv.variant_id = pv.id
               WHERE pv.product_id = Product.id
               ORDER BY
                 CASE
-                  WHEN COALESCE(inv.quantity, 0) > 0 THEN 0
+                  WHEN COALESCE(inv.available_quantity, 0) > 0 THEN 0
                   ELSE 1
                 END,
                 pv.id ASC
@@ -443,9 +443,9 @@ class ProductRepository {
           [
             literal(`(
               COALESCE(
-                (SELECT SUM(inv.quantity)
+                (SELECT SUM(inv.available_quantity)
                 FROM product_variants pv2
-                LEFT JOIN inventory inv ON inv.variant_id = pv2.id
+                LEFT JOIN inventories inv ON inv.variant_id = pv2.id
                 WHERE pv2.product_id = Product.id),
                 Product.stock,
                 0
@@ -479,9 +479,9 @@ class ProductRepository {
         [
           literal(`(
             COALESCE(
-              (SELECT SUM(inv.quantity)
+              (SELECT SUM(inv.available_quantity)
               FROM product_variants pv2
-              LEFT JOIN inventory inv ON inv.variant_id = pv2.id
+              LEFT JOIN inventories inv ON inv.variant_id = pv2.id
               WHERE pv2.product_id = Product.id),
               Product.stock,
               0

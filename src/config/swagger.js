@@ -79,6 +79,10 @@ const options = {
         description: 'Administrative order management endpoints',
       },
       {
+        name: 'Inventory',
+        description: 'Centralized inventory, reservation lifecycle, and stock ledger endpoints',
+      },
+      {
         name: 'Webhooks',
         description: 'Payment provider webhook endpoints',
       },
@@ -982,6 +986,17 @@ const options = {
             currency: { type: 'string', example: 'INR' },
           },
         },
+        InventoryReservationSnapshot: {
+          type: 'object',
+          properties: {
+            reservedCount: { type: 'integer', example: 2 },
+            reservationExpiresAt: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-05-31T12:35:21.000Z',
+            },
+          },
+        },
         CheckoutSuccessResponse: {
           type: 'object',
           properties: {
@@ -1010,6 +1025,10 @@ const options = {
                 },
                 totals: {
                   $ref: '#/components/schemas/CheckoutTotals',
+                },
+                reservation: {
+                  allOf: [{ $ref: '#/components/schemas/InventoryReservationSnapshot' }],
+                  nullable: true,
                 },
               },
             },
@@ -1342,10 +1361,16 @@ const options = {
         Inventory: {
           type: 'object',
           properties: {
+            productId: { type: 'integer', nullable: true, example: null },
+            variantId: { type: 'integer', nullable: true, example: 301 },
             quantity: { type: 'integer', example: 25 },
+            availableQuantity: { type: 'integer', example: 25 },
             reservedQuantity: { type: 'integer', example: 0 },
+            effectiveQuantity: { type: 'integer', example: 25 },
             lowStockThreshold: { type: 'integer', nullable: true, example: 5 },
             allowBackorder: { type: 'boolean', example: false },
+            reservationExpiresAt: { type: 'string', format: 'date-time', nullable: true, example: null },
+            isLowStock: { type: 'boolean', example: false },
           },
         },
         ProductVariant: {
@@ -1710,6 +1735,68 @@ const options = {
             },
           },
         },
+        ProductFacetBrandBucket: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            name: { type: 'string', example: 'Dell' },
+            slug: { type: 'string', example: 'dell' },
+            count: { type: 'integer', example: 23 },
+          },
+        },
+        ProductFacetAttributeValueBucket: {
+          type: 'object',
+          properties: {
+            value: { type: 'string', example: '16GB' },
+            valueSlug: { type: 'string', example: '16gb' },
+            count: { type: 'integer', example: 14 },
+          },
+        },
+        ProductFacetAttributeBucket: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'RAM' },
+            code: { type: 'string', example: 'ram' },
+            values: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductFacetAttributeValueBucket',
+              },
+            },
+          },
+        },
+        ProductFacets: {
+          type: 'object',
+          properties: {
+            brands: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductFacetBrandBucket',
+              },
+            },
+            priceRange: {
+              type: 'object',
+              properties: {
+                min: { type: 'number', format: 'float', nullable: true, example: 1000 },
+                max: { type: 'number', format: 'float', nullable: true, example: 120000 },
+              },
+            },
+            attributes: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/ProductFacetAttributeBucket',
+              },
+            },
+            meta: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                sampledProducts: { type: 'integer', example: 5000 },
+                isSampled: { type: 'boolean', example: false },
+              },
+            },
+          },
+        },
         ProductListSuccessResponse: {
           type: 'object',
           properties: {
@@ -1751,6 +1838,58 @@ const options = {
                     },
                   },
                 },
+                pagination: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer', example: 1 },
+                    limit: { type: 'integer', example: 20 },
+                    total: { type: 'integer', example: 45 },
+                    totalPages: { type: 'integer', example: 3 },
+                  },
+                },
+                facets: {
+                  $ref: '#/components/schemas/ProductFacets',
+                },
+              },
+            },
+          },
+        },
+        SearchSuggestionSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Search suggestions fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                products: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['iPhone 16', 'iPhone Charger'],
+                },
+                categories: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['Smartphones', 'Accessories'],
+                },
+                brands: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['Apple'],
+                },
+              },
+            },
+          },
+        },
+        ProductRelatedSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Related products fetched successfully' },
+            data: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/Product',
               },
             },
           },

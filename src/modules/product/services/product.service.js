@@ -1,17 +1,10 @@
 const ApiError = require('../../../core/errors/ApiError');
 const { sequelize } = require('../../../database/models');
-const { parsePagination, buildPaginationMeta } = require('../../../utils/pagination');
-const { parseSort, parseAttributeFilters } = require('../../../utils/filtering');
 const { generateSlug } = require('../../../utils/slug');
 const MediaService = require('../../media/services/media.service');
+const InventoryService = require('../../inventory/services/inventory.service');
 const ProductRepository = require('../repositories/product.repository');
-
-const DEFAULT_SORT = {
-  sortBy: 'createdAt',
-  sortOrder: 'DESC',
-};
-
-const ALLOWED_SORT_FIELDS = ['price', 'stock', 'title', 'createdAt'];
+const CatalogDiscoveryService = require('./catalogDiscovery.service');
 
 class ProductService {
   static async create(payload) {
@@ -62,6 +55,16 @@ class ProductService {
         { transaction }
       );
 
+      if (!hasVariants) {
+        await InventoryService.upsertInventoryRecord({
+          productId: product.id,
+          quantity: Number(payload.quantity),
+          reservedQuantity: 0,
+          allowBackorder: false,
+          transaction,
+        });
+      }
+
       await ProductRepository.replaceProductCategories(product.id, categoryIds, { transaction });
       await ProductRepository.replaceProductAttributes(product.id, this.toProductAttributeRows(product.id, normalizedAttributes), {
         transaction,
@@ -80,57 +83,15 @@ class ProductService {
   }
 
   static async list(query) {
-    const { page, limit, offset } = parsePagination(query);
-    const { sortBy, sortOrder } = this.resolveSort(query.sort);
-    const attributeFilters = parseAttributeFilters(query.attribute);
-    const productIds = await ProductRepository.findProductIdsByAttributeFilters(attributeFilters);
-
-    const { rows, count } = await ProductRepository.list({
-      search: query.search,
-      status: query.status,
-      productType: query.productType,
-      hasVariants: this.parseBooleanQuery(query.hasVariants),
-      category: query.category,
-      brand: query.brand,
-      productIds,
-      sortBy,
-      sortOrder,
-      limit,
-      offset,
-    });
-
-    return {
-      items: rows,
-      meta: buildPaginationMeta({
-        page,
-        limit,
-        totalItems: count,
-      }),
-    };
+    return CatalogDiscoveryService.listCatalog(query);
   }
 
   static async search(query) {
-    return this.list(query);
+    return CatalogDiscoveryService.searchProducts(query);
   }
 
-  static parseBooleanQuery(value) {
-    if (typeof value === 'boolean') {
-      return value;
-    }
-
-    if (typeof value === 'string') {
-      const normalized = value.trim().toLowerCase();
-
-      if (normalized === 'true') {
-        return true;
-      }
-
-      if (normalized === 'false') {
-        return false;
-      }
-    }
-
-    return undefined;
+  static async related(id, query = {}) {
+    return CatalogDiscoveryService.getRelatedProducts(id, query);
   }
 
   static async getById(id) {
@@ -211,6 +172,16 @@ class ProductService {
       }
 
       await ProductRepository.update(product, this.removeUndefined(nextPayload), { transaction });
+
+      if (!nextHasVariants) {
+        await InventoryService.upsertInventoryRecord({
+          productId: product.id,
+          quantity: nextPayload.stock,
+          reservedQuantity: 0,
+          allowBackorder: false,
+          transaction,
+        });
+      }
 
       const hasCategoryUpdate = Object.prototype.hasOwnProperty.call(payload, 'categoryIds')
         || Object.prototype.hasOwnProperty.call(payload, 'categoryNames');
@@ -1041,16 +1012,14 @@ class ProductService {
         { transaction }
       );
 
-      await ProductRepository.createInventory(
-        {
-          variantId: savedVariant.id,
-          quantity: variant.quantity,
-          reservedQuantity: variant.reservedQuantity,
-          lowStockThreshold: variant.lowStockThreshold,
-          allowBackorder: variant.allowBackorder,
-        },
-        { transaction }
-      );
+      await InventoryService.upsertInventoryRecord({
+        variantId: savedVariant.id,
+        quantity: variant.quantity,
+        reservedQuantity: variant.reservedQuantity,
+        lowStockThreshold: variant.lowStockThreshold,
+        allowBackorder: variant.allowBackorder,
+        transaction,
+      });
 
       await ProductRepository.bulkCreateVariantAttributeValues(
         variant.attributeValueLinks.map((entry) => ({
@@ -1218,15 +1187,6 @@ class ProductService {
     }
 
     return String(value);
-  }
-
-  static resolveSort(sort) {
-    const normalizedSort = String(sort || '').replace(/^createdat_/i, 'createdAt_');
-
-    return parseSort(normalizedSort, {
-      allowedFields: ALLOWED_SORT_FIELDS,
-      defaultSort: DEFAULT_SORT,
-    });
   }
 
   static async ensureVariantSkuAvailable(sku, { transaction } = {}) {

@@ -1,4 +1,5 @@
 const CategoryRepository = require('../repositories/category.repository');
+const CatalogDiscoveryService = require('./catalogDiscovery.service');
 
 class CategoryService {
   static async getTree({ status }) {
@@ -30,6 +31,10 @@ class CategoryService {
     });
 
     return roots;
+  }
+
+  static async getProductsBySlug(slug, query = {}) {
+    return CatalogDiscoveryService.listByCategorySlug(slug, query);
   }
 }
 

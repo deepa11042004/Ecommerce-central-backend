@@ -1,5 +1,7 @@
 const Joi = require('joi');
 
+const attributeFilterPattern = /^[^:]+:[^:]+(?:,[^:]+)*$/;
+
 const relativeUploadPathSchema = Joi.string()
   .pattern(/^uploads\/[a-z0-9-]+\/[0-9]{4}-[0-9]{2}\/[a-z0-9-]+\.(jpg|jpeg|png|webp)$/i)
   .messages({
@@ -180,26 +182,89 @@ const getProductByIdSchema = Joi.object({
   query: Joi.object({}).optional(),
 });
 
+const catalogQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(200).optional(),
+  search: Joi.string().allow('').optional(),
+  status: Joi.string().valid('active', 'inactive').optional(),
+  productType: Joi.string().valid('simple', 'configurable', 'variant').optional(),
+  hasVariants: Joi.boolean().optional(),
+  category: Joi.string().trim().min(1).max(160).optional(),
+  categorySlug: Joi.string().trim().min(1).max(160).optional(),
+  includeChildren: Joi.boolean().optional(),
+  brand: Joi.alternatives().try(Joi.number().integer().positive(), Joi.string().trim().min(1).max(140)).optional(),
+  brandId: Joi.number().integer().positive().optional(),
+  brandSlug: Joi.string().trim().min(1).max(140).optional(),
+  minPrice: Joi.number().min(0).optional(),
+  maxPrice: Joi.number().min(0).optional(),
+  availability: Joi.string().valid('all', 'in_stock', 'out_of_stock').optional(),
+  inStock: Joi.boolean().optional(),
+  discounted: Joi.boolean().optional(),
+  includeFacets: Joi.boolean().optional(),
+  ratingMin: Joi.number().min(0).max(5).optional(),
+  attribute: Joi.alternatives().try(
+    Joi.string().pattern(attributeFilterPattern),
+    Joi.array().items(Joi.string().pattern(attributeFilterPattern))
+  ).optional(),
+  sort: Joi.string().valid(
+    'relevance',
+    'price_asc',
+    'price_desc',
+    'newest',
+    'oldest',
+    'name_asc',
+    'name_desc',
+    'discount_desc',
+    'popular',
+    'rating',
+    'title_asc',
+    'title_desc',
+    'createdAt_asc',
+    'createdAt_desc',
+    'createdat_asc',
+    'createdat_desc'
+  ).optional(),
+}).optional();
+
 const listProductsSchema = Joi.object({
   body: Joi.object({}).optional(),
   params: Joi.object({}).optional(),
+  query: catalogQuerySchema,
+});
+
+const categoryProductsSchema = Joi.object({
+  body: Joi.object({}).optional(),
+  params: Joi.object({
+    slug: Joi.string().trim().min(1).max(160).required(),
+  }).required(),
+  query: catalogQuerySchema,
+});
+
+const brandProductsSchema = Joi.object({
+  body: Joi.object({}).optional(),
+  params: Joi.object({
+    slug: Joi.string().trim().min(1).max(140).required(),
+  }).required(),
+  query: catalogQuerySchema,
+});
+
+const relatedProductsSchema = Joi.object({
+  body: Joi.object({}).optional(),
+  params: Joi.object({
+    id: Joi.number().integer().positive().required(),
+  }).required(),
   query: Joi.object({
-    page: Joi.number().integer().min(1).optional(),
-    limit: Joi.number().integer().min(1).max(100).optional(),
-    search: Joi.string().allow('').optional(),
-    status: Joi.string().valid('active', 'inactive').optional(),
-    productType: Joi.string().valid('simple', 'configurable', 'variant').optional(),
-    hasVariants: Joi.boolean().optional(),
-    category: Joi.string().trim().min(1).max(160).optional(),
-    brand: Joi.number().integer().positive().optional(),
-    attribute: Joi.alternatives().try(
-      Joi.string().pattern(/^[^:]+:[^:]+$/),
-      Joi.array().items(Joi.string().pattern(/^[^:]+:[^:]+$/))
-    ).optional(),
-    sort: Joi.string()
-      .pattern(/^(price|stock|title|createdAt|createdat)_(asc|desc)$/i)
-      .optional(),
+    limit: Joi.number().integer().min(1).max(24).optional(),
   }).optional(),
+});
+
+const searchSuggestionsSchema = Joi.object({
+  body: Joi.object({}).optional(),
+  params: Joi.object({}).optional(),
+  query: Joi.object({
+    q: Joi.string().trim().min(1).max(100).required(),
+    limit: Joi.number().integer().min(1).max(20).optional(),
+  }).required(),
 });
 
 const categoryTreeSchema = Joi.object({
@@ -276,6 +341,10 @@ module.exports = {
   updateProductSchema,
   getProductByIdSchema,
   listProductsSchema,
+  categoryProductsSchema,
+  brandProductsSchema,
+  relatedProductsSchema,
+  searchSuggestionsSchema,
   categoryTreeSchema,
   listBrandsSchema,
   generateVariantsSchema,

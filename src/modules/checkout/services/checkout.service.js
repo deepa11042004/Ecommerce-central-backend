@@ -9,6 +9,7 @@ const ProductCatalogRepository = require('../../product/repositories/productCata
 const OrderRepository = require('../../order/repositories/order.repository');
 const PaymentRepository = require('../../payment/repositories/payment.repository');
 const PaymentService = require('../../payment/services/payment.service');
+const InventoryService = require('../../inventory/services/inventory.service');
 const AddressRepository = require('../../address/repositories/address.repository');
 const CouponValidationService = require('../../coupon/services/couponValidation.service');
 const {
@@ -34,7 +35,7 @@ class CheckoutService {
       throw ApiError.badRequest('Unsupported payment method');
     }
 
-    const { order, payment, totals, coupon } = await sequelize.transaction(async (transaction) => {
+    const { order, payment, totals, coupon, reservation } = await sequelize.transaction(async (transaction) => {
       const cart = await this.findCart(actor, { transaction });
 
       if (!cart || !cart.items?.length) {
@@ -93,7 +94,22 @@ class CheckoutService {
         { transaction }
       );
 
-      await OrderRepository.createItems(order.id, this.buildOrderItemRows(selections), { transaction });
+      const orderItems = await OrderRepository.createItems(order.id, this.buildOrderItemRows(selections), { transaction });
+
+      const reservation = await InventoryService.reserveStock({
+        items: orderItems.map((item) => ({
+          orderId: order.id,
+          orderItemId: item.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+        referenceType: 'ORDER',
+        referenceId: order.id,
+        reason: 'Checkout reservation created',
+        createdBy: actor.userId || null,
+        transaction,
+      });
 
       if (couponValidation?.coupon && totals.discountAmount > 0) {
         await CouponValidationService.recordCouponUsage({
@@ -123,7 +139,13 @@ class CheckoutService {
         includeAddresses: true,
       });
 
-      return { order: detailedOrder, payment, totals, coupon: couponValidation?.couponView || null };
+      return {
+        order: detailedOrder,
+        payment,
+        totals,
+        coupon: couponValidation?.couponView || null,
+        reservation,
+      };
     });
 
     try {
@@ -138,6 +160,12 @@ class CheckoutService {
         key: razorpay.key,
         totals,
         coupon,
+        reservation: reservation
+          ? {
+              reservedCount: reservation.reservedCount,
+              reservationExpiresAt: reservation.reservationExpiresAt,
+            }
+          : null,
       };
     } catch (error) {
       await PaymentService.markPaymentFailed(order, payment, { reason: error.message });

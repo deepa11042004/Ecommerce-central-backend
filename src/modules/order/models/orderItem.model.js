@@ -84,6 +84,11 @@ const defineOrderItemModel = (sequelize, DataTypes) => {
       foreignKey: 'variantId',
       as: 'variant',
     });
+
+    OrderItem.hasMany(models.InventoryReservation, {
+      foreignKey: 'orderItemId',
+      as: 'inventoryReservations',
+    });
   };
 
   return OrderItem;

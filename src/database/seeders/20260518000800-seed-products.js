@@ -318,10 +318,10 @@ module.exports = {
       return acc;
     }, {});
 
-    await queryInterface.bulkInsert('inventory', [
+    await queryInterface.bulkInsert('inventories', [
       {
         variant_id: variantIdBySku['WH-BLK-128'],
-        quantity: 25,
+        available_quantity: 25,
         reserved_quantity: 0,
         low_stock_threshold: 5,
         allow_backorder: false,
@@ -330,7 +330,7 @@ module.exports = {
       },
       {
         variant_id: variantIdBySku['WH-SIL-256'],
-        quantity: 14,
+        available_quantity: 14,
         reserved_quantity: 0,
         low_stock_threshold: 5,
         allow_backorder: false,
@@ -339,7 +339,7 @@ module.exports = {
       },
       {
         variant_id: variantIdBySku['LIC-STD-001'],
-        quantity: 9999,
+        available_quantity: 9999,
         reserved_quantity: 0,
         low_stock_threshold: null,
         allow_backorder: true,
@@ -433,7 +433,7 @@ module.exports = {
     });
 
     await queryInterface.bulkDelete('variant_attribute_values', null, {});
-    await queryInterface.bulkDelete('inventory', null, {});
+    await queryInterface.bulkDelete('inventories', null, {});
 
     await queryInterface.bulkDelete('product_variants', {
       sku: {
