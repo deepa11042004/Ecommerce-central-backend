@@ -14,7 +14,7 @@ const heroBannerIdSchema = Joi.object({
 
 const createHeroBannerSchema = Joi.object({
   body: Joi.object({
-    title: Joi.string().trim().max(200).required(),
+    title: Joi.string().trim().max(200).optional().allow('', null),
     subtitle: Joi.string().trim().max(255).optional().allow('', null),
     link: Joi.string().trim().max(500).optional().allow('', null),
     image: heroImagePathSchema.required(),
