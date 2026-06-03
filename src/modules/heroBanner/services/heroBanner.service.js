@@ -59,8 +59,8 @@ class HeroBannerService {
   }
 
   static async create(payload) {
-    const titleFromPayload = (payload.title || '').trim();
-    const finalTitle = titleFromPayload || this.generateTitleFromImagePath(payload.image);
+    const titleFromPayload = (payload.title !== undefined && payload.title !== null) ? String(payload.title).trim() : '';
+    const finalTitle = titleFromPayload;
 
     const banner = await HeroBannerRepository.create({
       title: finalTitle,
