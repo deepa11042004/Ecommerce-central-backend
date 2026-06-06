@@ -1,5 +1,3 @@
-const path = require('path');
-
 const SECTION_KEYS = Object.freeze({
   PRODUCT: 'products',
   VARIANT: 'variants',
@@ -36,9 +34,6 @@ const parseCsv = (value, fallback) => {
   return parsed.length ? parsed : fallback;
 };
 
-const UPLOAD_BASE_PATH = String(process.env.UPLOAD_BASE_PATH || 'uploads').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-const UPLOAD_ROOT_ABSOLUTE_PATH = path.resolve(process.cwd(), UPLOAD_BASE_PATH);
-
 const ALLOWED_IMAGE_MIME_TYPES = Object.freeze(parseCsv(process.env.ALLOWED_IMAGE_TYPES, DEFAULT_ALLOWED_IMAGE_TYPES));
 const ALLOWED_IMAGE_EXTENSIONS = Object.freeze(parseCsv(process.env.ALLOWED_IMAGE_EXTENSIONS, DEFAULT_ALLOWED_IMAGE_EXTENSIONS));
 
@@ -56,8 +51,6 @@ const MAX_FILE_SIZE_ANY_SECTION = Math.max(...Object.values(MAX_FILE_SIZE_BY_SEC
 
 module.exports = {
   SECTION_KEYS,
-  UPLOAD_BASE_PATH,
-  UPLOAD_ROOT_ABSOLUTE_PATH,
   ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_IMAGE_EXTENSIONS,
   MAX_FILE_SIZE_BY_SECTION,

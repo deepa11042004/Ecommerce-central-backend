@@ -1,6 +1,4 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -13,9 +11,6 @@ const notFoundMiddleware = require('./middleware/notFound.middleware');
 const errorMiddleware = require('./middleware/error.middleware');
 
 const app = express();
-const uploadsDir = path.resolve(process.cwd(), env.UPLOAD_BASE_PATH);
-
-fs.mkdirSync(uploadsDir, { recursive: true });
 
 const corsOrigin = env.CORS_ORIGIN === '*'
   ? true
@@ -45,7 +40,6 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(uploadsDir));
 
 if (env.NODE_ENV !== 'test') {
   app.use(

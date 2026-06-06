@@ -2,11 +2,14 @@ const Joi = require('joi');
 
 const attributeFilterPattern = /^[^:]+:[^:]+(?:,[^:]+)*$/;
 
-const relativeUploadPathSchema = Joi.string()
-  .pattern(/^uploads\/[a-z0-9-]+\/[0-9]{4}-[0-9]{2}\/[a-z0-9-]+\.(jpg|jpeg|png|webp)$/i)
-  .messages({
-    'string.pattern.base': 'Media path must be a relative uploads path (e.g. uploads/products/2026-05/file.webp)',
-  });
+const relativeUploadPathSchema = Joi.alternatives().try(
+  Joi.string().uri({ scheme: ['http', 'https'] }),
+  Joi.string().pattern(/^uploads\/[a-z0-9-]+\/[0-9]{4}-[0-9]{2}\/[a-z0-9-]+\.(jpg|jpeg|png|webp)$/i)
+).messages({
+  'alternative.types': 'Image must be a valid URL or a relative uploads path (e.g. uploads/products/2026-05/file.webp)',
+  'string.uri': 'Image must be a valid HTTP or HTTPS URL',
+  'string.pattern.base': 'Media path must be a relative uploads path (e.g. uploads/products/2026-05/file.webp)'
+});
 
 const attributeValueSchema = Joi.alternatives().try(
   Joi.string().trim().min(1).max(190),

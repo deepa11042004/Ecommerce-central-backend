@@ -1,12 +1,9 @@
-const fs = require('fs');
-const path = require('path');
 const ApiError = require('../../../core/errors/ApiError');
+const { getStorageProvider } = require('../../../core/storage');
 const { sequelize } = require('../../../database/models');
 const MediaRepository = require('../repositories/media.repository');
 const {
   SECTION_KEYS,
-  UPLOAD_BASE_PATH,
-  UPLOAD_ROOT_ABSOLUTE_PATH,
   ALLOWED_IMAGE_EXTENSIONS,
   ALLOWED_IMAGE_MIME_TYPES,
   MAX_FILE_SIZE_BY_SECTION,
@@ -26,20 +23,6 @@ class MediaService {
 
   static resolveMonthBucket(date = new Date()) {
     return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-  }
-
-  static async createMonthFolder(section) {
-    const normalizedSection = this.normalizeSection(section);
-    const monthBucket = this.resolveMonthBucket();
-    const absoluteFolder = path.join(UPLOAD_ROOT_ABSOLUTE_PATH, normalizedSection, monthBucket);
-
-    await fs.promises.mkdir(absoluteFolder, { recursive: true });
-
-    return {
-      absoluteFolder,
-      monthBucket,
-      section: normalizedSection,
-    };
   }
 
   static validateFile(file, section) {
@@ -75,7 +58,11 @@ class MediaService {
     };
   }
 
-  static generatePath(section, filename, monthBucket = this.resolveMonthBucket()) {
+  /**
+   * Build an S3 object key for the file.
+   * Format: {section}/{month-bucket}/{filename}
+   */
+  static buildObjectKey(section, filename, monthBucket = this.resolveMonthBucket()) {
     const normalizedSection = this.normalizeSection(section);
     const safeFilename = String(filename || '').replace(/\\/g, '/').split('/').pop();
 
@@ -83,71 +70,54 @@ class MediaService {
       throw ApiError.badRequest('Unsafe file name');
     }
 
-    return path.posix.join(UPLOAD_BASE_PATH, normalizedSection, monthBucket, safeFilename);
+    return `${normalizedSection}/${monthBucket}/${safeFilename}`;
   }
 
-  static assertRelativeUploadPath(relativePath) {
-    const normalized = String(relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
-
-    if (!normalized.startsWith(`${UPLOAD_BASE_PATH}/`)) {
-      throw ApiError.badRequest('Invalid upload path');
-    }
-
-    if (normalized.includes('..')) {
-      throw ApiError.badRequest('Unsafe upload path');
-    }
-
-    const absolutePath = path.resolve(process.cwd(), normalized);
-
-    if (!absolutePath.startsWith(UPLOAD_ROOT_ABSOLUTE_PATH)) {
-      throw ApiError.badRequest('Upload path escapes upload root');
-    }
-
-    return {
-      normalized,
-      absolutePath,
-    };
-  }
-
+  /**
+   * Upload a file to S3 and return the public URL.
+   */
   static async uploadFile({ section, file, baseName }) {
     const { extension, normalizedSection } = this.validateFile(file, section);
-    const { absoluteFolder, monthBucket } = await this.createMonthFolder(normalizedSection);
+    const monthBucket = this.resolveMonthBucket();
     const filename = buildUniqueFilename({
       baseName,
       originalName: file.originalname,
       extension,
     });
-    const absolutePath = path.join(absoluteFolder, filename);
+    const objectKey = this.buildObjectKey(normalizedSection, filename, monthBucket);
+    const mimeType = String(file.mimetype || '').toLowerCase();
 
-    await fs.promises.writeFile(absolutePath, file.buffer);
+    const storage = getStorageProvider();
+    const publicUrl = await storage.upload(file.buffer, objectKey, mimeType);
 
     return {
-      path: this.generatePath(normalizedSection, filename, monthBucket),
+      path: publicUrl,
       filename,
       size: file.size,
-      mimeType: String(file.mimetype || '').toLowerCase(),
+      mimeType,
     };
   }
 
-  static async deleteFile(relativePath) {
-    if (!relativePath || typeof relativePath !== 'string') {
+  /**
+   * Delete a file from S3 given its stored URL.
+   */
+  static async deleteFile(storedPath) {
+    if (!storedPath || typeof storedPath !== 'string') {
       return;
     }
 
-    let resolved;
+    const storage = getStorageProvider();
+    const s3Key = storage.extractKeyFromUrl(storedPath);
 
-    try {
-      resolved = this.assertRelativeUploadPath(relativePath);
-    } catch (error) {
+    if (!s3Key) {
       return;
     }
 
     try {
-      await fs.promises.unlink(resolved.absolutePath);
+      await storage.delete(s3Key);
     } catch (error) {
-      if (error.code !== 'ENOENT') {
-        throw error;
-      }
+      // Log but don't throw — deletion failures shouldn't block business logic
+      console.error(`[MediaService] Failed to delete S3 object "${s3Key}":`, error.message);
     }
   }
 
@@ -165,12 +135,6 @@ class MediaService {
     }
 
     return uploaded;
-  }
-
-  static getPublicUrl(relativePath) {
-    const { normalized } = this.assertRelativeUploadPath(relativePath);
-
-    return `/${normalized}`;
   }
 
   static async assignEntityFile({ section, entityId, file, baseName }) {

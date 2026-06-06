@@ -1,8 +1,13 @@
 const Joi = require('joi');
 
-const heroImagePathSchema = Joi.string()
-  .pattern(/^uploads\/hero-banners\/[0-9]{4}-[0-9]{2}\/[a-z0-9-]+\.(jpg|jpeg|png|webp)$/i)
-  .message('Image path must be a hero banner upload path (uploads/hero-banners/YYYY-MM/file.webp)');
+const heroImagePathSchema = Joi.alternatives().try(
+  Joi.string().uri({ scheme: ['http', 'https'] }),
+  Joi.string().pattern(/^uploads\/hero-banners\/[0-9]{4}-[0-9]{2}\/[a-z0-9-]+\.(jpg|jpeg|png|webp)$/i)
+).messages({
+  'alternative.types': 'Image must be a valid URL or a relative uploads path (e.g. uploads/hero-banners/YYYY-MM/file.webp)',
+  'string.uri': 'Image must be a valid HTTP or HTTPS URL',
+  'string.pattern.base': 'Image path must be a hero banner upload path (uploads/hero-banners/YYYY-MM/file.webp)'
+});
 
 const heroBannerIdSchema = Joi.object({
   body: Joi.object({}).optional(),

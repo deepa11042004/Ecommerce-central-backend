@@ -43,7 +43,6 @@ const schema = Joi.object({
   CATALOG_RECOMMENDATIONS_ENABLED: Joi.boolean().truthy('true').falsy('false').default(true),
   CATALOG_RATING_FILTER_ENABLED: Joi.boolean().truthy('true').falsy('false').default(false),
 
-  UPLOAD_BASE_PATH: Joi.string().trim().default('uploads'),
   ALLOWED_IMAGE_TYPES: Joi.string().trim().default('image/jpeg,image/png,image/webp'),
   ALLOWED_IMAGE_EXTENSIONS: Joi.string().trim().default('.jpg,.jpeg,.png,.webp'),
   MAX_PRODUCT_IMAGE_SIZE: Joi.number().integer().min(1024).default(5 * 1024 * 1024),
@@ -52,6 +51,28 @@ const schema = Joi.object({
   MAX_BRAND_IMAGE_SIZE: Joi.number().integer().min(1024).default(3 * 1024 * 1024),
   MAX_AVATAR_SIZE: Joi.number().integer().min(1024).default(2 * 1024 * 1024),
   MAX_TEMP_IMAGE_SIZE: Joi.number().integer().min(1024).default(5 * 1024 * 1024),
+
+  STORAGE_PROVIDER: Joi.string().valid('s3', 'local').default('s3'),
+  AWS_ACCESS_KEY_ID: Joi.string().trim().when('STORAGE_PROVIDER', {
+    is: 's3',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  AWS_SECRET_ACCESS_KEY: Joi.string().trim().when('STORAGE_PROVIDER', {
+    is: 's3',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  AWS_REGION: Joi.string().trim().when('STORAGE_PROVIDER', {
+    is: 's3',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  AWS_S3_BUCKET: Joi.string().trim().when('STORAGE_PROVIDER', {
+    is: 's3',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
 }).unknown();
 
 const { value, error } = schema.validate(process.env, { abortEarly: false });

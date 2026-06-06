@@ -1,4 +1,3 @@
-const fs = require('fs');
 const path = require('path');
 const ApiError = require('../../../core/errors/ApiError');
 const MediaService = require('../../media/services/media.service');
@@ -11,10 +10,10 @@ class HeroBannerService {
     }
 
     try {
-      // Extract filename from path (e.g., "uploads/hero-banners/2026-06/hero-banner-1234567-abc.webp" -> "hero-banner-1234567-abc.webp")
+      // Extract filename from path or URL
       const filename = path.basename(imagePath);
       // Remove extension
-      const nameWithoutExt = filename.replace(/\\.[^/.]+$/, '');
+      const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
       // Convert to title case: replace hyphens/underscores with spaces and capitalize
       const title = nameWithoutExt
         .split(/[-_]+/)
@@ -28,22 +27,16 @@ class HeroBannerService {
     }
   }
 
+  /**
+   * Returns the stored image path as-is. With S3, stored paths are full
+   * public URLs that are always accessible.
+   */
   static resolveExistingImagePath(imagePath) {
-    if (!imagePath) {
+    if (!imagePath || typeof imagePath !== 'string') {
       return null;
     }
 
-    try {
-      const { normalized, absolutePath } = MediaService.assertRelativeUploadPath(imagePath);
-
-      if (!fs.existsSync(absolutePath)) {
-        return null;
-      }
-
-      return normalized;
-    } catch {
-      return null;
-    }
+    return imagePath.trim() || null;
   }
 
   static async listPublic() {
