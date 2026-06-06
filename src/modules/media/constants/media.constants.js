@@ -8,7 +8,7 @@ const SECTION_KEYS = Object.freeze({
   TEMP: 'temp',
 });
 
-const DEFAULT_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const DEFAULT_ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const DEFAULT_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
 const parseNumber = (value, fallback) => {
