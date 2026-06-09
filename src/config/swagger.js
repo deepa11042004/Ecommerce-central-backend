@@ -106,6 +106,14 @@ const options = {
         name: 'Media',
         description: 'Centralized image upload, replacement, and deletion endpoints',
       },
+      {
+        name: 'Reviews',
+        description: 'Customer review creation, rating, helpful votes, and media upload endpoints',
+      },
+      {
+        name: 'Admin Reviews',
+        description: 'Administrative review moderation, reply, and analytics endpoints',
+      },
     ],
     components: {
       securitySchemes: {
@@ -1927,6 +1935,279 @@ const options = {
             data: {
               type: 'object',
               example: {},
+            },
+          },
+        },
+        ReviewMediaFile: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            mediaId: { type: 'integer', example: 7 },
+            url: { type: 'string', example: 'https://bucket.s3.region.amazonaws.com/reviews/2026-06/review-1-ab12.webp' },
+            filename: { type: 'string', example: 'review-1-1748123123-ab12.webp' },
+            mimeType: { type: 'string', example: 'image/webp' },
+            size: { type: 'integer', example: 204800 },
+          },
+        },
+        Review: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            productId: { type: 'integer', example: 42 },
+            userId: { type: 'integer', example: 18 },
+            orderId: { type: 'integer', nullable: true, example: 101 },
+            rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 },
+            title: { type: 'string', nullable: true, example: 'Excellent product!' },
+            comment: { type: 'string', nullable: true, example: 'Works exactly as described.' },
+            isVerifiedPurchase: { type: 'boolean', example: true },
+            status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'HIDDEN'], example: 'APPROVED' },
+            helpfulCount: { type: 'integer', example: 12 },
+            adminReply: { type: 'string', nullable: true, example: 'Thank you for your feedback!' },
+            repliedAt: { type: 'string', format: 'date-time', nullable: true },
+            user: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'integer', example: 18 },
+                fullName: { type: 'string', example: 'Jane Doe' },
+              },
+            },
+            media: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ReviewMediaFile' },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        AdminReview: {
+          allOf: [
+            { $ref: '#/components/schemas/Review' },
+            {
+              type: 'object',
+              properties: {
+                user: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    id: { type: 'integer', example: 18 },
+                    fullName: { type: 'string', example: 'Jane Doe' },
+                    email: { type: 'string', example: 'jane@example.com' },
+                  },
+                },
+                product: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    id: { type: 'integer', example: 42 },
+                    title: { type: 'string', example: 'Wireless Headphones' },
+                    slug: { type: 'string', example: 'wireless-headphones' },
+                    thumbnail: { type: 'string', nullable: true },
+                  },
+                },
+                repliedBy: { type: 'integer', nullable: true, example: 2 },
+              },
+            },
+          ],
+        },
+        CreateReviewRequest: {
+          type: 'object',
+          required: ['productId', 'rating'],
+          properties: {
+            productId: { type: 'integer', example: 42 },
+            rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 },
+            title: { type: 'string', maxLength: 160, nullable: true, example: 'Excellent product!' },
+            comment: { type: 'string', maxLength: 5000, nullable: true, example: 'Works exactly as described.' },
+            mediaIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              maxItems: 5,
+              nullable: true,
+              example: [1, 2],
+              description: 'IDs returned from POST /reviews/media/upload',
+            },
+          },
+        },
+        UpdateReviewRequest: {
+          type: 'object',
+          properties: {
+            rating: { type: 'integer', minimum: 1, maximum: 5, example: 4 },
+            title: { type: 'string', maxLength: 160, nullable: true },
+            comment: { type: 'string', maxLength: 5000, nullable: true },
+          },
+        },
+        ReviewSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Review fetched successfully' },
+            data: { $ref: '#/components/schemas/Review' },
+          },
+        },
+        AdminReviewSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Review fetched successfully' },
+            data: { $ref: '#/components/schemas/AdminReview' },
+          },
+        },
+        ReviewListSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Reviews fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Review' } },
+                meta: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer', example: 1 },
+                    limit: { type: 'integer', example: 10 },
+                    totalItems: { type: 'integer', example: 48 },
+                    totalPages: { type: 'integer', example: 5 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        AdminReviewListSuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Reviews fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/AdminReview' } },
+                meta: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer', example: 1 },
+                    limit: { type: 'integer', example: 20 },
+                    totalItems: { type: 'integer', example: 150 },
+                    totalPages: { type: 'integer', example: 8 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        HelpfulVoteResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Helpful vote recorded' },
+            data: {
+              type: 'object',
+              properties: {
+                reviewId: { type: 'integer', example: 1 },
+                helpfulCount: { type: 'integer', example: 13 },
+              },
+            },
+          },
+        },
+        ReviewMediaUploadResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Media uploaded successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                mediaId: { type: 'integer', example: 7 },
+                url: { type: 'string', example: 'https://bucket.s3.region.amazonaws.com/reviews/2026-06/review-1-ab12.webp' },
+                filename: { type: 'string', example: 'review-1-1748123123-ab12.webp' },
+                mimeType: { type: 'string', example: 'image/webp' },
+                size: { type: 'integer', example: 204800 },
+              },
+            },
+          },
+        },
+        ReviewRatingDistribution: {
+          type: 'object',
+          properties: {
+            1: { type: 'integer', example: 5 },
+            2: { type: 'integer', example: 8 },
+            3: { type: 'integer', example: 20 },
+            4: { type: 'integer', example: 60 },
+            5: { type: 'integer', example: 107 },
+          },
+        },
+        ReviewAnalyticsResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Analytics fetched successfully' },
+            data: {
+              type: 'object',
+              properties: {
+                totalReviews: { type: 'integer', example: 200 },
+                approvedReviews: { type: 'integer', example: 170 },
+                pendingReviews: { type: 'integer', example: 18 },
+                rejectedReviews: { type: 'integer', example: 7 },
+                hiddenReviews: { type: 'integer', example: 5 },
+                verifiedReviews: { type: 'integer', example: 155 },
+                averageRating: { type: 'number', format: 'float', example: 4.32 },
+                ratingDistribution: { $ref: '#/components/schemas/ReviewRatingDistribution' },
+              },
+            },
+          },
+        },
+        ProductRatingEntry: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 42 },
+            title: { type: 'string', example: 'Wireless Headphones' },
+            slug: { type: 'string', example: 'wireless-headphones' },
+            thumbnail: { type: 'string', nullable: true },
+            averageRating: { type: 'number', format: 'float', example: 4.75 },
+            totalReviews: { type: 'integer', example: 48 },
+            ratingDistribution: { $ref: '#/components/schemas/ReviewRatingDistribution' },
+          },
+        },
+        ProductRatingListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Top rated products fetched successfully' },
+            data: { type: 'array', items: { $ref: '#/components/schemas/ProductRatingEntry' } },
+          },
+        },
+      },
+      responses: {
+        BadRequest: {
+          description: 'Validation or business rule error',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+            },
+          },
+        },
+        Unauthorized: {
+          description: 'Authentication token missing or invalid',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+            },
+          },
+        },
+        Forbidden: {
+          description: 'Insufficient permissions or feature disabled',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+            },
+          },
+        },
+        NotFound: {
+          description: 'Resource not found',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
             },
           },
         },

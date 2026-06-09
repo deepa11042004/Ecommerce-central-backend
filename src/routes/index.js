@@ -12,6 +12,7 @@ const { routes: wishlistRoutes } = require('../modules/wishlist');
 const { routes: heroBannerRoutes } = require('../modules/heroBanner');
 const { adminRoutes: adminCouponRoutes } = require('../modules/coupon');
 const { adminRoutes: adminInventoryRoutes } = require('../modules/inventory');
+const { routes: reviewRoutes, adminRoutes: adminReviewRoutes, productReviewRoutes } = require('../modules/review');
 
 const router = express.Router();
 
@@ -55,5 +56,8 @@ router.use('/wishlist', wishlistRoutes);
 router.use('/hero-banners', heroBannerRoutes);
 router.use('/admin/coupons', adminCouponRoutes);
 router.use('/admin/inventory', adminInventoryRoutes);
+router.use('/reviews', reviewRoutes);
+router.use('/admin/reviews', adminReviewRoutes);
+router.use('/products/:id/reviews', productReviewRoutes);
 
 module.exports = router;

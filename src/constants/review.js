@@ -1,0 +1,46 @@
+'use strict';
+
+const REVIEW_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  HIDDEN: 'HIDDEN',
+});
+
+const REVIEW_STATUS_LIST = Object.freeze(Object.values(REVIEW_STATUS));
+
+const REVIEW_CREATION_RULE = Object.freeze({
+  ONE_REVIEW_PER_PRODUCT: 'ONE_REVIEW_PER_PRODUCT',
+  ONE_REVIEW_PER_ORDER_ITEM: 'ONE_REVIEW_PER_ORDER_ITEM',
+  ALLOW_MULTIPLE_REVIEWS: 'ALLOW_MULTIPLE_REVIEWS',
+});
+
+const REVIEW_CREATION_RULE_LIST = Object.freeze(Object.values(REVIEW_CREATION_RULE));
+
+const REVIEW_FEATURE_KEYS = Object.freeze({
+  REVIEWS_ENABLED: 'reviews_enabled',
+  REVIEW_MEDIA_ENABLED: 'review_media_enabled',
+  REVIEW_MODERATION_ENABLED: 'review_moderation_enabled',
+  VERIFIED_REVIEWS_ONLY: 'verified_reviews_only',
+  ADMIN_REVIEW_REPLIES_ENABLED: 'admin_review_replies_enabled',
+  REVIEW_HELPFUL_VOTES_ENABLED: 'review_helpful_votes_enabled',
+});
+
+const REVIEW_FEATURE_KEYS_LIST = Object.freeze(Object.values(REVIEW_FEATURE_KEYS));
+
+const REVIEW_CREATION_RULE_ENV = (() => {
+  const val = process.env.REVIEW_CREATION_RULE;
+  return REVIEW_CREATION_RULE_LIST.includes(val)
+    ? val
+    : REVIEW_CREATION_RULE.ONE_REVIEW_PER_PRODUCT;
+})();
+
+module.exports = {
+  REVIEW_STATUS,
+  REVIEW_STATUS_LIST,
+  REVIEW_CREATION_RULE,
+  REVIEW_CREATION_RULE_LIST,
+  REVIEW_CREATION_RULE_ENV,
+  REVIEW_FEATURE_KEYS,
+  REVIEW_FEATURE_KEYS_LIST,
+};

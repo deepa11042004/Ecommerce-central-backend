@@ -85,6 +85,48 @@ const defineProductModel = (sequelize, DataTypes) => {
         allowNull: true,
         field: 'seo_description',
       },
+      averageRating: {
+        type: DataTypes.DECIMAL(3, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        field: 'average_rating',
+      },
+      totalReviews: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'total_reviews',
+      },
+      rating1Count: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'rating_1_count',
+      },
+      rating2Count: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'rating_2_count',
+      },
+      rating3Count: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'rating_3_count',
+      },
+      rating4Count: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'rating_4_count',
+      },
+      rating5Count: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'rating_5_count',
+      },
     },
     {
       tableName: 'products',
@@ -182,6 +224,11 @@ const defineProductModel = (sequelize, DataTypes) => {
     Product.hasMany(models.OrderItem, {
       foreignKey: 'productId',
       as: 'orderItems',
+    });
+
+    Product.hasMany(models.Review, {
+      foreignKey: 'productId',
+      as: 'reviews',
     });
   };
 

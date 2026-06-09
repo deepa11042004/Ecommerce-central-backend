@@ -34,6 +34,10 @@ const defineCouponModel = require('../../modules/coupon/models/coupon.model');
 const defineCouponProductModel = require('../../modules/coupon/models/couponProduct.model');
 const defineCouponCategoryModel = require('../../modules/coupon/models/couponCategory.model');
 const defineCouponUsageModel = require('../../modules/coupon/models/couponUsage.model');
+const defineMediaFileModel = require('../../modules/media/models/mediaFile.model');
+const defineReviewModel = require('../../modules/review/models/review.model');
+const defineReviewMediaModel = require('../../modules/review/models/reviewMedia.model');
+const defineReviewVoteModel = require('../../modules/review/models/reviewVote.model');
 
 const db = {};
 
@@ -70,6 +74,10 @@ db.Coupon = defineCouponModel(sequelize, DataTypes);
 db.CouponProduct = defineCouponProductModel(sequelize, DataTypes);
 db.CouponCategory = defineCouponCategoryModel(sequelize, DataTypes);
 db.CouponUsage = defineCouponUsageModel(sequelize, DataTypes);
+db.MediaFile = defineMediaFileModel(sequelize, DataTypes);
+db.Review = defineReviewModel(sequelize, DataTypes);
+db.ReviewMedia = defineReviewMediaModel(sequelize, DataTypes);
+db.ReviewVote = defineReviewVoteModel(sequelize, DataTypes);
 
 Object.values(db).forEach((model) => {
   if (typeof model.associate === 'function') {
